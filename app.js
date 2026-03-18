@@ -1,15 +1,7 @@
 var useState = React.useState;
 var useEffect = React.useEffect;
 
-window._fbReady = false;
-try {
-  if (typeof firebase !== "undefined") {
-    if (!firebase.apps.length) {
-      firebase.initializeApp({ databaseURL: "https://littleportionfarm-default-rtdb.firebaseio.com" });
-    }
-    window._fbReady = true;
-  }
-} catch(e) { window._fbReady = false; }
+var FB_URL = "https://littleportionfarm-default-rtdb.firebaseio.com/lpf";
 
 window.storage = {
   get: async function(key) {
@@ -18,27 +10,30 @@ window.storage = {
   },
   set: async function(key, val) {
     try { localStorage.setItem(key, val); } catch(e) {}
-    if (window._fbReady) {
-      try { firebase.database().ref("lpf/" + key).set(JSON.parse(val)); } catch(e) {}
-    }
+    try {
+      fetch(FB_URL + "/" + key + ".json", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: val
+      });
+    } catch(e) {}
   }
 };
 
 async function fbPull() {
-  if (!window._fbReady) return false;
   try {
-    var timeout = new Promise(function(_, rej) { setTimeout(rej, 8000); });
-    var snap = await Promise.race([firebase.database().ref("lpf").get(), timeout]);
-    if (snap && snap.exists()) {
-      var data = snap.val();
-      Object.keys(data).forEach(function(k) {
-        try { localStorage.setItem(k, JSON.stringify(data[k])); } catch(e) {}
-      });
-      return true;
-    }
-    return false;
+    var res = await fetch(FB_URL + ".json");
+    if (!res.ok) return false;
+    var data = await res.json();
+    if (!data) return false;
+    Object.keys(data).forEach(function(k) {
+      try { localStorage.setItem(k, JSON.stringify(data[k])); } catch(e) {}
+    });
+    return true;
   } catch(e) { return false; }
 }
+
+window._fbReady = true;
 
 
 var DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
