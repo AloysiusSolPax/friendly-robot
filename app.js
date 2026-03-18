@@ -2,30 +2,17 @@ var useState = React.useState;
 var useEffect = React.useEffect;
 
 window._fbReady = false;
-window._fbCache = null;
-function initFirebase() {
-  try {
+try {
+  if (typeof firebase !== "undefined") {
     if (!firebase.apps.length) {
       firebase.initializeApp({ databaseURL: "https://littleportionfarm-default-rtdb.firebaseio.com" });
     }
     window._fbReady = true;
-  } catch(e) { window._fbReady = false; }
-}
-initFirebase();
-async function loadFirebaseCache() {
-  if (!window._fbReady) return;
-  try {
-    var timeout = new Promise(function(_, rej) { setTimeout(rej, 4000); });
-    var snap = await Promise.race([firebase.database().ref("lpf").get(), timeout]);
-    if (snap && snap.exists()) window._fbCache = snap.val();
-  } catch(e) {}
-}
+  }
+} catch(e) { window._fbReady = false; }
 
 window.storage = {
   get: async function(key) {
-    if (window._fbCache && window._fbCache[key] !== undefined) {
-      return { value: JSON.stringify(window._fbCache[key]) };
-    }
     var v = localStorage.getItem(key);
     return v ? { value: v } : undefined;
   },
@@ -36,6 +23,22 @@ window.storage = {
     }
   }
 };
+
+async function fbPull() {
+  if (!window._fbReady) return false;
+  try {
+    var timeout = new Promise(function(_, rej) { setTimeout(rej, 8000); });
+    var snap = await Promise.race([firebase.database().ref("lpf").get(), timeout]);
+    if (snap && snap.exists()) {
+      var data = snap.val();
+      Object.keys(data).forEach(function(k) {
+        try { localStorage.setItem(k, JSON.stringify(data[k])); } catch(e) {}
+      });
+      return true;
+    }
+    return false;
+  } catch(e) { return false; }
+}
 
 
 var DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -191,6 +194,19 @@ var SPlav="#9080b8";
 var SPtext="#e8e0f0";
 var SPdim="#6a6080";
 var SPmid="#a09ab0";
+
+function SyncButton(){
+  var[st,setSt]=useState("idle");
+  async function pull(){
+    setSt("loading");
+    var ok=await fbPull();
+    if(ok){setSt("done");setTimeout(function(){window.location.reload();},1200);}
+    else{setSt("error");setTimeout(function(){setSt("idle");},3000);}
+  }
+  var label=st==="loading"?"Pulling data...":(st==="done"?"Done! Reloading...":(st==="error"?"Could not reach cloud":"Pull from Cloud"));
+  var bg=st==="done"?"#7ab87a":(st==="error"?T.rose:T.teal);
+  return <button onClick={pull} disabled={st==="loading"||st==="done"} style={{width:"100%",background:bg,color:"#fff",border:"none",borderRadius:12,padding:"12px",fontSize:13,cursor:"pointer",fontFamily:"Georgia,serif",opacity:(st==="loading"||st==="done")?0.7:1}}>{label}</button>;
+}
 
 function ApiKeyInput(){
   var hasSaved=!!(localStorage.getItem("claudeApiKey"));
@@ -570,7 +586,6 @@ function Main(props){
 
   useEffect(function(){
     async function loadAll(){
-      await loadFirebaseCache();
       var rt=["Make sure all doors are closed","Have everyone sign in","New volunteers sign waiver"];
       var defT=[];DAYS.forEach(function(day){rt.forEach(function(text,i){defT.push({id:"r"+i+day+mkid(),text:text,done:false,category:"Important",recurring:true,day:day});});});
       var t=await ld("lpf_tasks",defT);
@@ -1218,13 +1233,15 @@ function Main(props){
             </div>
             <div style={crd({padding:20})}>
               <Sec>Cloud Sync</Sec>
-              <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:window._fbReady?T.tealBg:T.bg2,borderRadius:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:window._fbReady?T.tealBg:T.bg2,borderRadius:14,marginBottom:14}}>
                 <div style={{width:12,height:12,borderRadius:"50%",background:window._fbReady?"#7ab87a":T.textDim,flexShrink:0}}/>
                 <div>
-                  <div style={{fontSize:13,fontWeight:700,color:window._fbReady?T.teal:T.textMid}}>{window._fbReady?"Syncing to cloud":"Not connected"}</div>
-                  <div style={{fontSize:11,color:T.textDim,marginTop:2}}>{window._fbReady?"Your data saves to Firebase and appears on all your devices automatically.":"Firebase could not be reached. Data is saving locally only."}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:window._fbReady?T.teal:T.textMid}}>{window._fbReady?"Connected to Firebase":"Not connected"}</div>
+                  <div style={{fontSize:11,color:T.textDim,marginTop:2}}>{window._fbReady?"All changes save to the cloud automatically.":"Firebase could not be reached. Saving locally only."}</div>
                 </div>
               </div>
+              <div style={{fontSize:12,color:T.textMid,marginBottom:10,lineHeight:1.5}}>On a new device, tap <b>Pull from Cloud</b> to load all your farm data from Firebase.</div>
+              <SyncButton/>
             </div>
           </div>
         )}
