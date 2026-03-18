@@ -1,8 +1,34 @@
 var useState = React.useState;
 var useEffect = React.useEffect;
+
+window._fbReady = false;
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp({ databaseURL: "https://littleportionfarm-default-rtdb.firebaseio.com" });
+    }
+    window._fbReady = true;
+  } catch(e) { window._fbReady = false; }
+}
+initFirebase();
+
 window.storage = {
-  get: async function(key) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : undefined; } catch(e) { return undefined; } },
-  set: async function(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+  get: async function(key) {
+    if (window._fbReady) {
+      try {
+        var snap = await firebase.database().ref("lpf/" + key).get();
+        if (snap.exists()) return { value: JSON.stringify(snap.val()) };
+      } catch(e) {}
+    }
+    var v = localStorage.getItem(key);
+    return v ? { value: v } : undefined;
+  },
+  set: async function(key, val) {
+    try { localStorage.setItem(key, val); } catch(e) {}
+    if (window._fbReady) {
+      try { await firebase.database().ref("lpf/" + key).set(JSON.parse(val)); } catch(e) {}
+    }
+  }
 };
 
 
@@ -1182,6 +1208,16 @@ function Main(props){
               <Sec>Claude AI Settings</Sec>
               <div style={{fontSize:13,color:T.textMid,marginBottom:16,lineHeight:1.6}}>Your API key is saved on this device and used for AI features like smart task adding, journal writing, observations, and technique cards.</div>
               <ApiKeyInput/>
+            </div>
+            <div style={crd({padding:20})}>
+              <Sec>Cloud Sync</Sec>
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:window._fbReady?T.tealBg:T.bg2,borderRadius:14}}>
+                <div style={{width:12,height:12,borderRadius:"50%",background:window._fbReady?"#7ab87a":T.textDim,flexShrink:0}}/>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:window._fbReady?T.teal:T.textMid}}>{window._fbReady?"Syncing to cloud":"Not connected"}</div>
+                  <div style={{fontSize:11,color:T.textDim,marginTop:2}}>{window._fbReady?"Your data saves to Firebase and appears on all your devices automatically.":"Firebase could not be reached. Data is saving locally only."}</div>
+                </div>
+              </div>
             </div>
           </div>
         )}
