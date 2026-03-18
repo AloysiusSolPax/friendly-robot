@@ -581,6 +581,7 @@ function Main(props){
 
   useEffect(function(){
     async function loadAll(){
+      await fbPull();
       var rt=["Make sure all doors are closed","Have everyone sign in","New volunteers sign waiver"];
       var defT=[];DAYS.forEach(function(day){rt.forEach(function(text,i){defT.push({id:"r"+i+day+mkid(),text:text,done:false,category:"Important",recurring:true,day:day});});});
       var t=await ld("lpf_tasks",defT);
