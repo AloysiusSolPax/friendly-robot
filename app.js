@@ -1,7 +1,7 @@
 var useState = React.useState;
 var useEffect = React.useEffect;
 
-var FB_URL = "https://littleportionfarm-default-rtdb.firebaseio.com/lpf";
+var FB_URL = "https://littleportionfarm-default-rtdb.firebaseio.com/lpf_9Rx4kW2mT7vQ";
 
 window.storage = {
   get: async function(key) {
