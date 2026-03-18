@@ -141,7 +141,7 @@ function Sec(p){return <div style={{fontSize:11,color:T.peach,fontWeight:700,tex
 function Lbl(p){return <div style={{fontSize:10,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6}}>{p.children}</div>;}
 function SeSel(p){return <select value={p.val} onChange={p.onChange} style={Object.assign({},inp_s,p.style||{})}><optgroup label="Sessions">{p.ss.map(function(s){return <option key={s.id} value={s.id}>{sLbl(s)}</option>;})}</optgroup><optgroup label="Days">{DAYS.map(function(d){return <option key={d} value={d}>{d}</option>;})}</optgroup></select>;}
 
-var MENU=[{k:"myday",l:"My Day",ic:"☀️"},{k:"checklist",l:"Tasks",ic:"✓"},{k:"add",l:"Add",ic:"+"},{k:"harvest",l:"Harvest",ic:"🌾"},{k:"analytics",l:"Analytics",ic:"📊"},{k:"weather",l:"Weather",ic:"🌤"},{k:"volunteers",l:"Team",ic:"👥"},{k:"briefing",l:"Briefing",ic:"⚠️"},{k:"techniques",l:"Guides",ic:"📖"},{k:"notes",l:"Notes",ic:"📋"},{k:"observations",l:"Observe",ic:"👀"}];
+var MENU=[{k:"myday",l:"My Day",ic:"☀️"},{k:"checklist",l:"Tasks",ic:"✓"},{k:"add",l:"Add",ic:"+"},{k:"harvest",l:"Harvest",ic:"🌾"},{k:"analytics",l:"Analytics",ic:"📊"},{k:"weather",l:"Weather",ic:"🌤"},{k:"volunteers",l:"Team",ic:"👥"},{k:"briefing",l:"Briefing",ic:"⚠️"},{k:"techniques",l:"Guides",ic:"📖"},{k:"notes",l:"Notes",ic:"📋"},{k:"observations",l:"Observe",ic:"👀"},{k:"settings",l:"Settings",ic:"⚙️"}];
 var QUOTES=[{text:"The best time to plant a tree was 20 years ago. The second best time is now.",author:"Chinese Proverb"},{text:"He who plants a garden plants happiness.",author:"Chinese Proverb"},{text:"To forget how to dig the earth and to tend the soil is to forget ourselves.",author:"Mahatma Gandhi"},{text:"Nature does not hurry, yet everything is accomplished.",author:"Lao Tzu"},{text:"The glory of gardening: hands in the dirt, head in the sun, heart with nature.",author:"Alfred Austin"},{text:"In every walk with nature one receives far more than he seeks.",author:"John Muir"},{text:"Patience is bitter, but its fruit is sweet.",author:"Aristotle"},{text:"Small deeds done are better than great deeds planned.",author:"Peter Marshall"},{text:"The farmer has to be an optimist or he wouldn't still be a farmer.",author:"Will Rogers"},{text:"If you have a garden and a library, you have everything you need.",author:"Marcus Tullius Cicero"}];
 
 var APP_PW="littleportion";
@@ -201,7 +201,6 @@ function LockScreen(props){
           {err&&<div style={{textAlign:"center",fontSize:12,color:T.rose,marginTop:8,fontStyle:"italic"}}>Incorrect password — try again</div>}
           <button onClick={attempt} style={{width:"100%",marginTop:16,background:"linear-gradient(135deg,"+T.peach+","+T.gold+")",color:"#fff",border:"none",borderRadius:16,padding:"14px",fontSize:14,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:700}}>Enter</button>
         </div>
-        <ApiKeyInput/>
         <div style={{textAlign:"center",marginTop:24,fontSize:10,color:T.textDim,letterSpacing:"0.1em"}}>ELLICOTT CITY, MD</div>
       </div>
     </div>
@@ -1152,6 +1151,16 @@ function Main(props){
             </div>
             {techs.length===0&&<div style={{textAlign:"center",color:T.textDim,fontSize:14,fontStyle:"italic",marginTop:20}}>No technique cards yet.</div>}
             {techs.map(function(tech){return <div key={tech.id} style={crd()}><div style={{padding:"14px 16px",borderBottom:"1px solid "+T.border,display:"flex",alignItems:"center"}}><span style={{flex:1,fontWeight:700,fontSize:15,color:T.peach}}>{tech.title}</span><button onClick={function(){setTechs(function(pv){return pv.filter(function(x){return x.id!==tech.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16}}>X</button></div><div style={{padding:"14px 16px"}}>{(tech.steps||[]).map(function(step,i){return <div key={i} style={{display:"flex",gap:12,marginBottom:12}}><div style={{width:28,height:28,borderRadius:"50%",background:T.peachBg2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:T.peach,flexShrink:0}}>{i+1}</div><p style={{fontSize:14,color:T.textMid,lineHeight:1.6,margin:0,paddingTop:4}}>{step}</p></div>;})} {tech.tips&&<div style={{background:T.butterBg,borderRadius:12,padding:"12px 14px"}}><span style={{fontSize:10,color:T.gold,fontWeight:700,textTransform:"uppercase"}}>Tip</span><p style={{fontSize:13,color:T.textMid,lineHeight:1.6,margin:"4px 0 0",fontStyle:"italic"}}>{tech.tips}</p></div>}</div></div>;})}
+          </div>
+        )}
+
+        {tab==="settings"&&(
+          <div>
+            <div style={crd({padding:20})}>
+              <Sec>Claude AI Settings</Sec>
+              <div style={{fontSize:13,color:T.textMid,marginBottom:16,lineHeight:1.6}}>Your API key is saved on this device and used for AI features like smart task adding, journal writing, observations, and technique cards.</div>
+              <ApiKeyInput/>
+            </div>
           </div>
         )}
 
