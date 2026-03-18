@@ -161,14 +161,36 @@ var SPdim="#6a6080";
 var SPmid="#a09ab0";
 
 function ApiKeyInput(){
-  var[key,setKey]=useState(function(){return localStorage.getItem("claudeApiKey")||"";});
+  var hasSaved=!!(localStorage.getItem("claudeApiKey"));
+  var[hasKey,setHasKey]=useState(hasSaved);
+  var[editing,setEditing]=useState(!hasSaved);
+  var[key,setKey]=useState("");
   var[saved,setSaved]=useState(false);
-  function save(){localStorage.setItem("claudeApiKey",key);setSaved(true);setTimeout(function(){setSaved(false);},2000);}
+  function save(){if(!key.trim())return;localStorage.setItem("claudeApiKey",key.trim());setHasKey(true);setEditing(false);setKey("");setSaved(true);setTimeout(function(){setSaved(false);},2500);}
+  function remove(){localStorage.removeItem("claudeApiKey");setHasKey(false);setEditing(true);setKey("");setSaved(false);}
+  if(hasKey&&!editing){
+    return(
+      <div style={{background:"rgba(255,255,255,0.6)",borderRadius:16,padding:"16px 20px",boxShadow:"0 2px 12px rgba(180,120,60,0.1)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+          <div style={{width:10,height:10,borderRadius:"50%",background:"#7ab87a",flexShrink:0}}/>
+          <div style={{fontSize:13,color:T.textMid,flex:1}}>API key saved</div>
+          {saved&&<div style={{fontSize:11,color:"#7ab87a",fontStyle:"italic"}}>Saved!</div>}
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={function(){setEditing(true);setKey("");}} style={{flex:1,background:T.teal,color:"#fff",border:"none",borderRadius:12,padding:"10px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif"}}>Replace Key</button>
+          <button onClick={remove} style={{flex:1,background:"#f5e8e8",color:T.rose,border:"1.5px solid "+T.rose+"44",borderRadius:12,padding:"10px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif"}}>Remove</button>
+        </div>
+      </div>
+    );
+  }
   return(
-    <div style={{marginTop:20,background:"rgba(255,255,255,0.6)",borderRadius:16,padding:"16px 20px",boxShadow:"0 2px 12px rgba(180,120,60,0.1)"}}>
-      <div style={{fontSize:11,color:T.textMid,marginBottom:10,textAlign:"center",letterSpacing:"0.05em"}}>Claude AI API Key</div>
-      <input type="password" value={key} onChange={function(e){setKey(e.target.value);setSaved(false);}} placeholder="sk-ant-..." style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1.5px solid "+T.border,fontSize:13,fontFamily:"Georgia,serif",background:"rgba(255,255,255,0.9)",color:T.text,outline:"none",boxSizing:"border-box"}}/>
-      <button onClick={save} style={{width:"100%",marginTop:10,background:saved?"#7ab87a":T.teal,color:"#fff",border:"none",borderRadius:12,padding:"10px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",transition:"background 0.3s"}}>{saved?"Saved!":"Save API Key"}</button>
+    <div style={{background:"rgba(255,255,255,0.6)",borderRadius:16,padding:"16px 20px",boxShadow:"0 2px 12px rgba(180,120,60,0.1)"}}>
+      <div style={{fontSize:11,color:T.textMid,marginBottom:10,textAlign:"center",letterSpacing:"0.05em"}}>Paste your Claude API key</div>
+      <input type="password" value={key} onChange={function(e){setKey(e.target.value);}} placeholder="sk-ant-..." style={{width:"100%",padding:"10px 14px",borderRadius:12,border:"1.5px solid "+T.border,fontSize:13,fontFamily:"Georgia,serif",background:"rgba(255,255,255,0.9)",color:T.text,outline:"none",boxSizing:"border-box"}}/>
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button onClick={save} disabled={!key.trim()} style={{flex:1,background:T.teal,color:"#fff",border:"none",borderRadius:12,padding:"10px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",opacity:key.trim()?1:0.4}}>Save</button>
+        {hasKey&&<button onClick={function(){setEditing(false);setKey("");}} style={{background:"rgba(0,0,0,0.06)",color:T.textMid,border:"none",borderRadius:12,padding:"10px 14px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif"}}>Cancel</button>}
+      </div>
     </div>
   );
 }
