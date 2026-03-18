@@ -146,7 +146,7 @@ var T={bg:"#faf5ee",bg2:"#f5ede0",bg3:"#fff8ef",border:"#ecddc8",gold:"#c89530",
 var _n=Date.now();
 function mkid(){return String(++_n);}
 async function sv(k,v){try{await window.storage.set(k,JSON.stringify(v));}catch(e){}}
-async function ld(k,d){try{var r=await window.storage.get(k);return r?JSON.parse(r.value):d;}catch(e){return d;}}
+async function ld(k,d){try{var r=await window.storage.get(k);if(!r)return d;var v=JSON.parse(r.value);if(typeof v==="string"){try{v=JSON.parse(v);}catch(e){}}return(v!==null&&v!==undefined)?v:d;}catch(e){return d;}}
 async function aiCall(p){for(var a=0;a<2;a++){try{var r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("claudeApiKey")||"","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1000,messages:[{role:"user",content:p}]})});if(!r.ok)throw new Error();var d=await r.json();var t=(d.content||[]).map(function(b){return b.text||"";}).join("");if(!t)throw new Error();return t;}catch(e){if(a<1)await new Promise(function(res){setTimeout(res,800);});else throw e;}}}
 
 function ft12(t){var p=t.split(":");var h=parseInt(p[0]);return(h===0?12:h>12?h-12:h)+":"+p[1]+(h>=12?"pm":"am");}
