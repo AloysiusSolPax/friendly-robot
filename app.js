@@ -16,7 +16,8 @@ window.storage = {
   get: async function(key) {
     if (window._fbReady) {
       try {
-        var snap = await firebase.database().ref("lpf/" + key).get();
+        var timeout = new Promise(function(_, rej) { setTimeout(function() { rej(new Error("timeout")); }, 5000); });
+        var snap = await Promise.race([firebase.database().ref("lpf/" + key).get(), timeout]);
         if (snap.exists()) return { value: JSON.stringify(snap.val()) };
       } catch(e) {}
     }
