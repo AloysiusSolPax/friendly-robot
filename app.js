@@ -2,6 +2,7 @@ var useState = React.useState;
 var useEffect = React.useEffect;
 
 window._fbReady = false;
+window._fbCache = null;
 function initFirebase() {
   try {
     if (!firebase.apps.length) {
@@ -11,15 +12,19 @@ function initFirebase() {
   } catch(e) { window._fbReady = false; }
 }
 initFirebase();
+async function loadFirebaseCache() {
+  if (!window._fbReady) return;
+  try {
+    var timeout = new Promise(function(_, rej) { setTimeout(rej, 4000); });
+    var snap = await Promise.race([firebase.database().ref("lpf").get(), timeout]);
+    if (snap && snap.exists()) window._fbCache = snap.val();
+  } catch(e) {}
+}
 
 window.storage = {
   get: async function(key) {
-    if (window._fbReady) {
-      try {
-        var timeout = new Promise(function(_, rej) { setTimeout(function() { rej(new Error("timeout")); }, 5000); });
-        var snap = await Promise.race([firebase.database().ref("lpf/" + key).get(), timeout]);
-        if (snap.exists()) return { value: JSON.stringify(snap.val()) };
-      } catch(e) {}
+    if (window._fbCache && window._fbCache[key] !== undefined) {
+      return { value: JSON.stringify(window._fbCache[key]) };
     }
     var v = localStorage.getItem(key);
     return v ? { value: v } : undefined;
@@ -27,7 +32,7 @@ window.storage = {
   set: async function(key, val) {
     try { localStorage.setItem(key, val); } catch(e) {}
     if (window._fbReady) {
-      try { await firebase.database().ref("lpf/" + key).set(JSON.parse(val)); } catch(e) {}
+      try { firebase.database().ref("lpf/" + key).set(JSON.parse(val)); } catch(e) {}
     }
   }
 };
@@ -565,6 +570,7 @@ function Main(props){
 
   useEffect(function(){
     async function loadAll(){
+      await loadFirebaseCache();
       var rt=["Make sure all doors are closed","Have everyone sign in","New volunteers sign waiver"];
       var defT=[];DAYS.forEach(function(day){rt.forEach(function(text,i){defT.push({id:"r"+i+day+mkid(),text:text,done:false,category:"Important",recurring:true,day:day});});});
       var t=await ld("lpf_tasks",defT);
