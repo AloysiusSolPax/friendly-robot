@@ -571,6 +571,8 @@ function Main(props){
   var[viewDay,setViewDay]=useState(TODAY);
   var[addDay,setAddDay]=useState(TODAY);
   var[inp,setInp]=useState(""); var[aiLd,setAiLd]=useState(false); var[aiSt,setAiSt]=useState("");
+  var[addRepeat,setAddRepeat]=useState(false);
+  var[addBrainInp,setAddBrainInp]=useState(""); var[addBrainLd,setAddBrainLd]=useState(false); var[addBrainResult,setAddBrainResult]=useState(null);
   var[nInp,setNInp]=useState(""); var[nLd,setNLd]=useState(false);
   var[oInp,setOInp]=useState(""); var[oLd,setOLd]=useState(false);
   var[tR,setTR]=useState(""); var[tCr,setTCr]=useState("None"); var[tTk,setTTk]=useState("None"); var[tLd,setTLd]=useState(false); var[tSt,setTSt]=useState("");
@@ -707,7 +709,26 @@ function Main(props){
   async function addJournal(){if(!mjInp.trim())return;setMjLd(true);try{var raw=await aiCall("Warm 2-4 sentence first-person farm journal from: \""+mjInp+"\". Just the text.");setMyJournal(function(pv){return[{id:mkid(),raw:mjInp.trim(),text:raw.trim(),date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});}catch(e){setMyJournal(function(pv){return[{id:mkid(),raw:mjInp.trim(),text:mjInp.trim(),date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});}setMjInp("");setMjLd(false);}
   function addMyCheck(){if(!mcInp.trim())return;setMyChecks(function(pv){return pv.concat([{id:mkid(),text:mcInp.trim(),done:false}]);});setMcInp("");}
   function addMySess(){if(!msDt2)return;var d=new Date(msDt2+"T12:00:00");setMySess(function(pv){return pv.concat([{id:mkid(),date:String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0")+"/"+d.getFullYear(),dow:DOW[d.getDay()],time:"custom"}]);});setMsDt2("");setShMyAddS(false);}
-  async function quickAdd(){if(!inp.trim())return;setAiLd(true);try{var raw=await aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+inp+"\". ONLY JSON:{\"text\":\"t\",\"category\":\"c\"}");var p=JSON.parse(raw.replace(/```json|```/g,"").trim());setTasks(function(pr){return pr.concat([{id:mkid(),text:p.text||inp.trim(),category:p.category||"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added!");}catch(e){setTasks(function(pr){return pr.concat([{id:mkid(),text:inp.trim(),category:"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added");}setInp("");setAiLd(false);setTimeout(function(){setAiSt("");},2000);}
+  async function quickAdd(){if(!inp.trim())return;setAiLd(true);try{var raw=await aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+inp+"\". ONLY JSON:{\"text\":\"t\",\"category\":\"c\"}");var p=JSON.parse(raw.replace(/```json|```/g,"").trim());if(addRepeat){DAYS.forEach(function(d){setTasks(function(pr){return pr.concat([{id:mkid(),text:p.text||inp.trim(),category:p.category||"General",done:false,recurring:true,day:d}]);});});setAiSt("Added to all days!");}else{setTasks(function(pr){return pr.concat([{id:mkid(),text:p.text||inp.trim(),category:p.category||"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added!");}}catch(e){if(addRepeat){DAYS.forEach(function(d){setTasks(function(pr){return pr.concat([{id:mkid(),text:inp.trim(),category:"General",done:false,recurring:true,day:d}]);});});setAiSt("Added to all days");}else{setTasks(function(pr){return pr.concat([{id:mkid(),text:inp.trim(),category:"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added");}}setInp("");setAddRepeat(false);setAiLd(false);setTimeout(function(){setAiSt("");},2000);}
+  async function processAddBrain(){
+    if(!addBrainInp.trim())return;setAddBrainLd(true);setAddBrainResult(null);
+    try{
+      var raw=await aiCall("Parse rough farm notes into clean tasks. Categories:"+CATS.join(",")+". ONLY JSON:\n{\"tasks\":[{\"text\":\"clean polished task\",\"category\":\"c\",\"recurring\":true_or_false}]}\nMark as recurring:true if the note says every day, daily, always, or similar.\nInput:\""+addBrainInp.replace(/"/g,"'")+"\"");
+      var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
+      var parsed=(JSON.parse(mt[0]).tasks||[]);var added=0;
+      parsed.forEach(function(item){
+        if(!item.text)return;
+        if(item.recurring){
+          DAYS.forEach(function(d){setTasks(function(pr){return pr.concat([{id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:true,day:d}]);});});
+        }else{
+          setTasks(function(pr){return pr.concat([{id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:false,day:addDay}]);});
+        }
+        added++;
+      });
+      setAddBrainResult(added>0?"Sorted "+added+" task"+(added>1?"s":"")+"!":"No tasks found — try being more specific.");
+    }catch(e){setAddBrainResult("Could not sort — try again.");}
+    setAddBrainInp("");setAddBrainLd(false);setTimeout(function(){setAddBrainResult(null);},5000);
+  }
   function togT(id){setTasks(function(t){return t.map(function(x){return x.id===id?Object.assign({},x,{done:!x.done}):x;});});}
   function delT(id){setTasks(function(t){return t.filter(function(x){return x.id!==id;});});}
   async function addNote(){if(!nInp.trim())return;setNLd(true);try{var raw=await aiCall("Categorize farm note. Categories:"+NOTE_CATS.join(",")+". Note:\""+nInp+"\". ONLY JSON:{\"text\":\"t\",\"category\":\"c\"}");var p=JSON.parse(raw.replace(/```json|```/g,"").trim());setNotes(function(pv){return pv.concat([{id:mkid(),text:p.text||nInp.trim(),category:p.category||"General",date:todayStr}]);});}catch(e){setNotes(function(pv){return pv.concat([{id:mkid(),text:nInp.trim(),category:"General",date:todayStr}]);});}setNInp("");setNLd(false);}
@@ -1002,7 +1023,25 @@ function Main(props){
           </div>
         )}
 
-        {tab==="add"&&<div><div style={crd({padding:16})}><Lbl>Adding to</Lbl><SeSel val={addDay} onChange={function(e){setAddDay(e.target.value);}} ss={ss} style={{width:"100%"}}/></div><div style={crd({padding:16})}><Sec>Quick Add Task</Sec><div style={{display:"flex",gap:8}}><input value={inp} onChange={function(e){setInp(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")quickAdd();}} placeholder="e.g. harvest kale rows 3-5" style={Object.assign({},inp_s,{flex:1})}/><button onClick={quickAdd} disabled={aiLd||!inp.trim()} style={Object.assign({},btn(),{opacity:(aiLd||!inp.trim())?0.4:1})}>{aiLd?"...":"Add"}</button></div>{aiSt&&<div style={{textAlign:"center",fontSize:12,color:T.green,marginTop:8}}>{aiSt}</div>}</div></div>}
+        {tab==="add"&&<div>
+          <div style={crd({padding:16})}><Lbl>Adding to</Lbl><SeSel val={addDay} onChange={function(e){setAddDay(e.target.value);}} ss={ss} style={{width:"100%"}}/></div>
+          <div style={crd({padding:16})}>
+            <Sec>Quick Add Task</Sec>
+            <div style={{display:"flex",gap:8,marginBottom:8}}>
+              <input value={inp} onChange={function(e){setInp(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")quickAdd();}} placeholder="e.g. harvest kale rows 3-5" style={Object.assign({},inp_s,{flex:1})}/>
+              <button onClick={quickAdd} disabled={aiLd||!inp.trim()} style={Object.assign({},btn(),{opacity:(aiLd||!inp.trim())?0.4:1})}>{aiLd?"...":"Add"}</button>
+            </div>
+            <button onClick={function(){setAddRepeat(function(v){return!v;});}} style={{background:addRepeat?T.teal+"22":"transparent",color:addRepeat?T.teal:T.textDim,border:"1.5px solid "+(addRepeat?T.teal:T.border),borderRadius:20,padding:"6px 14px",fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:addRepeat?700:400,width:"100%"}}>{addRepeat?"Repeat Every Day: ON — will add to Mon-Sat":"Repeat Every Day: OFF — adding to selected day only"}</button>
+            {aiSt&&<div style={{textAlign:"center",fontSize:12,color:T.green,marginTop:8}}>{aiSt}</div>}
+          </div>
+          <div style={crd({padding:16})}>
+            <Sec>AI Task Sorter</Sec>
+            <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Paste rough notes — AI will clean them up, categorize, and add as tasks. Mention "every day" or "daily" and it will auto-repeat.</div>
+            <textarea value={addBrainInp} onChange={function(e){setAddBrainInp(e.target.value);}} placeholder={"e.g. close bins at end of every session, remember to check the gate latch, harvest row 3 kale if ready, water hoop house daily..."} rows={4} style={Object.assign({},ta_s,{marginBottom:10})}/>
+            <button onClick={processAddBrain} disabled={addBrainLd||!addBrainInp.trim()} style={Object.assign({},btn(),{width:"100%",opacity:(addBrainLd||!addBrainInp.trim())?0.4:1})}>{addBrainLd?"Sorting...":"Sort & Add Tasks"}</button>
+            {addBrainResult&&<div style={{marginTop:10,padding:"10px 14px",background:addBrainResult.startsWith("Sorted")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:addBrainResult.startsWith("Sorted")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{addBrainResult}</div>}
+          </div>
+        </div>}
 
         {tab==="harvest"&&(
           <div>
