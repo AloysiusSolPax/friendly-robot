@@ -54,6 +54,25 @@ var TECH_TASKS=["None","Harvesting","Watering","Packing","Planting","Cleanup","O
 var DEF_SESS=[{id:"s1",date:"03/17/2026",dow:"Tuesday",time:"10am-1pm",signup:9},{id:"s2",date:"03/18/2026",dow:"Wednesday",time:"1pm-4pm",signup:6},{id:"s3",date:"03/19/2026",dow:"Thursday",time:"1pm-4pm",signup:2},{id:"s4",date:"03/19/2026",dow:"Thursday",time:"4pm-7pm",signup:8},{id:"s5",date:"03/20/2026",dow:"Friday",time:"1pm-4pm",signup:4},{id:"s6",date:"03/21/2026",dow:"Saturday",time:"8:30am-2pm",signup:22},{id:"s7",date:"03/26/2026",dow:"Thursday",time:"1pm-4pm",signup:1},{id:"s8",date:"03/26/2026",dow:"Thursday",time:"4pm-7pm",signup:9},{id:"s9",date:"03/27/2026",dow:"Friday",time:"1pm-4pm",signup:3},{id:"s10",date:"03/28/2026",dow:"Saturday",time:"8:30am-2pm",signup:13},{id:"s11",date:"03/31/2026",dow:"Tuesday",time:"10am-1pm",signup:1}];
 var SIG_MAP={s1:9,s2:6,s3:2,s4:8,s5:4,s6:22,s7:1,s8:9,s9:3,s10:13,s11:1};
 var MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var FARM_LAT=39.2673;
+var FARM_LON=-76.7985;
+
+function wmoToCondition(code){
+  if(code===0)return{condition:"Clear",weatherCode:0};
+  if(code===1)return{condition:"Mostly Clear",weatherCode:1};
+  if(code===2)return{condition:"Partly Cloudy",weatherCode:2};
+  if(code===3)return{condition:"Overcast",weatherCode:3};
+  if(code===45||code===48)return{condition:"Foggy",weatherCode:45};
+  if(code>=51&&code<=57)return{condition:"Light Rain",weatherCode:61};
+  if(code===61||code===80)return{condition:"Light Rain",weatherCode:61};
+  if(code===63||code===81)return{condition:"Rain",weatherCode:63};
+  if(code===65||code===82)return{condition:"Heavy Rain",weatherCode:65};
+  if(code===71||code===85)return{condition:"Light Snow",weatherCode:71};
+  if(code===73)return{condition:"Snow",weatherCode:73};
+  if(code===75||code===77||code===86)return{condition:"Heavy Snow",weatherCode:75};
+  if(code>=95)return{condition:"Thunderstorm",weatherCode:95};
+  return{condition:"Partly Cloudy",weatherCode:2};
+}
 
 var VOL_MILESTONES=[{hours:1,label:"First Hour",icon:"🌱",desc:"Showed up and got their hands dirty"},{hours:5,label:"Getting Started",icon:"🌿",desc:"5 volunteer hours logged"},{hours:10,label:"Farm Friend",icon:"🌾",desc:"10 hours contributed to the farm"},{hours:25,label:"Dedicated Farmer",icon:"⭐",desc:"25 hours — truly committed"},{hours:50,label:"Farm Champion",icon:"🏆",desc:"50 hours — an extraordinary volunteer"},{hours:100,label:"Farm Legend",icon:"🌟",desc:"100 hours — part of the farm's soul"}];
 var SESSION_MILESTONES=[{sessions:1,label:"First Session",icon:"👣",desc:"Attended their first session"},{sessions:5,label:"Regular",icon:"📅",desc:"5 sessions attended"},{sessions:10,label:"Committed",icon:"💪",desc:"10 sessions — a true regular"},{sessions:25,label:"Veteran",icon:"🎖️",desc:"25 sessions attended"}];
@@ -613,7 +632,7 @@ function Main(props){
   useEffect(function(){if(loaded)sv("lpf_mysess",mySess);},[mySess,loaded]);
   useEffect(function(){if(loaded)sv("lpf_milestones",shownMilestones);},[shownMilestones,loaded]);
   useEffect(function(){if(loaded)sv("lpf_sessions",ss);},[ss,loaded]);
-  useEffect(function(){if((tab==="myday"||tab==="home")&&!myWD&&!myWLd)loadMyW();},[tab]);
+  useEffect(function(){if((tab==="myday"||tab==="home"||tab==="weather")&&!myWD&&!myWLd)loadMyW();},[tab]);
   useEffect(function(){if(aWh.length>0)setACn(String(aWh.length));},[aWh]);
 
   if(!loaded)return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:T.bg,fontFamily:"Georgia,serif",color:T.textDim,fontSize:14}}>Loading farm data...</div>;
@@ -679,7 +698,7 @@ function Main(props){
   }
 
   function saveManualW(){var t2=parseInt(mwTemp);if(!t2&&t2!==0)return;var w={tempF:t2,condition:mwCond,weatherCode:MW_CODES[mwCond]||0};setMyWD(w);setWD(w);setMwEdit(false);}
-  async function loadMyW(){setMyWLd(true);try{var raw=await aiCall("Current weather Ellicott City MD. ONLY JSON:{\"tempF\":65,\"condition\":\"Partly Cloudy\",\"weatherCode\":2}");var mt=raw.match(/\{[\s\S]*?\}/);if(mt){var p=JSON.parse(mt[0]);if(p.tempF)setMyWD(p);}}catch(e){}setMyWLd(false);}
+  async function loadMyW(){setMyWLd(true);try{var url="https://api.open-meteo.com/v1/forecast?latitude="+FARM_LAT+"&longitude="+FARM_LON+"&current=temperature_2m,weather_code,wind_speed_10m,precipitation&temperature_unit=fahrenheit&wind_speed_unit=mph";var res=await fetch(url);var data=await res.json();var cur=data.current;var mapped=wmoToCondition(cur.weather_code);var wd={tempF:Math.round(cur.temperature_2m),condition:mapped.condition,weatherCode:mapped.weatherCode,windMph:Math.round(cur.wind_speed_10m||0),precipIn:cur.precipitation||0,live:true};setMyWD(wd);setWD(wd);}catch(e){}setMyWLd(false);}
   async function addJournal(){if(!mjInp.trim())return;setMjLd(true);try{var raw=await aiCall("Warm 2-4 sentence first-person farm journal from: \""+mjInp+"\". Just the text.");setMyJournal(function(pv){return[{id:mkid(),raw:mjInp.trim(),text:raw.trim(),date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});}catch(e){setMyJournal(function(pv){return[{id:mkid(),raw:mjInp.trim(),text:mjInp.trim(),date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});}setMjInp("");setMjLd(false);}
   function addMyCheck(){if(!mcInp.trim())return;setMyChecks(function(pv){return pv.concat([{id:mkid(),text:mcInp.trim(),done:false}]);});setMcInp("");}
   function addMySess(){if(!msDt2)return;var d=new Date(msDt2+"T12:00:00");setMySess(function(pv){return pv.concat([{id:mkid(),date:String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0")+"/"+d.getFullYear(),dow:DOW[d.getDay()],time:"custom"}]);});setMsDt2("");setShMyAddS(false);}
@@ -1057,10 +1076,14 @@ function Main(props){
           <div>
             <div style={{background:"linear-gradient(135deg,#e8f0e8,#dce8dc)",borderRadius:24,padding:28,marginBottom:18,textAlign:"center",position:"relative",overflow:"hidden",boxShadow:T.shadowLg}}>
               <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,"+T.teal+","+T.butter+","+T.peach+")"}}/>
-              <div style={{fontSize:9,letterSpacing:"0.4em",color:T.teal,textTransform:"uppercase",fontWeight:700,marginBottom:14}}>Ellicott City, MD</div>
-              {!wD&&!mwEdit&&<button onClick={function(){setMwEdit(true);}} style={btn()}>Enter Weather</button>}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:14}}>
+                <div style={{fontSize:9,letterSpacing:"0.4em",color:T.teal,textTransform:"uppercase",fontWeight:700}}>Ellicott City, MD</div>
+                <button onClick={function(){setMyWD(null);setWD(null);loadMyW();}} style={{background:"rgba(255,255,255,0.5)",border:"none",borderRadius:20,padding:"4px 10px",cursor:"pointer",fontSize:12,color:T.teal}} title="Refresh live weather">&#x21BB; Refresh</button>
+              </div>
+              {!wD&&!mwEdit&&myWLd&&<div style={{fontSize:14,color:T.textDim,padding:"12px 0"}}>Loading live weather...</div>}
+              {!wD&&!mwEdit&&!myWLd&&<button onClick={function(){setMwEdit(true);}} style={btn()}>Enter Weather Manually</button>}
               {mwEdit&&<div><div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:10}}><input type="number" value={mwTemp} onChange={function(e){setMwTemp(e.target.value);}} placeholder="F" style={{width:65,padding:10,borderRadius:14,border:"1.5px solid "+T.border,background:"rgba(255,255,255,0.7)",color:T.text,fontSize:22,textAlign:"center",outline:"none"}}/><select value={mwCond} onChange={function(e){setMwCond(e.target.value);}} style={{padding:10,borderRadius:14,border:"1.5px solid "+T.border,background:"rgba(255,255,255,0.7)",color:T.text,fontSize:12,outline:"none"}}>{MW_CONDS.map(function(c){return <option key={c}>{c}</option>;})}</select></div><div style={{display:"flex",gap:8,justifyContent:"center"}}><button onClick={saveManualW} style={btn()}>Save</button><button onClick={function(){setMwEdit(false);}} style={btn2()}>Cancel</button></div></div>}
-              {wD&&!mwEdit&&<div><div style={{fontSize:56}}>{wIc(wD.weatherCode||0)}</div><div style={{fontSize:48,fontWeight:300,color:T.text,lineHeight:1}}>{wD.tempF}°</div><div style={{fontSize:17,color:T.textMid,margin:"8px 0 16px"}}>{wD.condition}</div><button onClick={function(){setMwTemp(String(wD.tempF));setMwCond(wD.condition||"Clear");setMwEdit(true);}} style={btn2(T.teal)}>Update</button></div>}
+              {wD&&!mwEdit&&<div><div style={{fontSize:56}}>{wIc(wD.weatherCode||0)}</div><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><div style={{fontSize:48,fontWeight:300,color:T.text,lineHeight:1}}>{wD.tempF}°</div>{wD.live&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:T.teal,borderRadius:10,padding:"3px 8px",letterSpacing:"0.06em"}}>LIVE</span>}</div><div style={{fontSize:17,color:T.textMid,margin:"8px 0 8px"}}>{wD.condition}</div>{wD.live&&<div style={{fontSize:12,color:T.textDim,marginBottom:12}}>{wD.windMph} mph wind{wD.precipIn>0?" · "+wD.precipIn+"\" precip":""}</div>}<button onClick={function(){setMwTemp(String(wD.tempF));setMwCond(wD.condition||"Clear");setMwEdit(true);}} style={btn2(T.teal)}>Override</button></div>}
             </div>
             <div style={crd({padding:16})}><Sec>Weather Note</Sec><SeSel val={wDy} onChange={function(e){setWDy(e.target.value);}} ss={ss} style={{width:"100%",marginBottom:8}}/><textarea value={wN} onChange={function(e){setWN(e.target.value);}} placeholder="e.g. Hot day, moved harvesting earlier" rows={2} style={ta_s}/><button onClick={function(){if(wN.trim()){setWLog(function(pv){return pv.concat([{id:mkid(),day:wDy,note:wN.trim(),date:todayStr}]);});setWN("");}}} disabled={!wN.trim()} style={Object.assign({},btn(T.teal,"#fff"),{marginTop:8,opacity:!wN.trim()?0.4:1})}>Save Note</button></div>
             {wLog.slice().reverse().map(function(e){return <div key={e.id} style={crd({padding:"12px 16px"})}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><Pill bg={T.tealBg} color={T.teal}>{(e.day||"").slice(0,3)}</Pill><span style={{fontSize:11,color:T.textDim}}>{e.date}</span><button onClick={function(){setWLog(function(wl){return wl.filter(function(x){return x.id!==e.id;});});}} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16}}>X</button></div><p style={{margin:0,fontSize:13,color:T.textMid,fontStyle:"italic"}}>{e.note}</p></div>;})}
