@@ -709,22 +709,24 @@ function Main(props){
   async function addJournal(){if(!mjInp.trim())return;setMjLd(true);try{var raw=await aiCall("Warm 2-4 sentence first-person farm journal from: \""+mjInp+"\". Just the text.");setMyJournal(function(pv){return[{id:mkid(),raw:mjInp.trim(),text:raw.trim(),date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});}catch(e){setMyJournal(function(pv){return[{id:mkid(),raw:mjInp.trim(),text:mjInp.trim(),date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});}setMjInp("");setMjLd(false);}
   function addMyCheck(){if(!mcInp.trim())return;setMyChecks(function(pv){return pv.concat([{id:mkid(),text:mcInp.trim(),done:false}]);});setMcInp("");}
   function addMySess(){if(!msDt2)return;var d=new Date(msDt2+"T12:00:00");setMySess(function(pv){return pv.concat([{id:mkid(),date:String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0")+"/"+d.getFullYear(),dow:DOW[d.getDay()],time:"custom"}]);});setMsDt2("");setShMyAddS(false);}
-  async function quickAdd(){if(!inp.trim())return;setAiLd(true);try{var raw=await aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+inp+"\". ONLY JSON:{\"text\":\"t\",\"category\":\"c\"}");var p=JSON.parse(raw.replace(/```json|```/g,"").trim());if(addRepeat){var allSlots=DAYS.concat(ss.map(function(s){return s.id;}));allSlots.forEach(function(d){setTasks(function(pr){return pr.concat([{id:mkid(),text:p.text||inp.trim(),category:p.category||"General",done:false,recurring:true,day:d}]);});});setAiSt("Added to all days & sessions!");}else{setTasks(function(pr){return pr.concat([{id:mkid(),text:p.text||inp.trim(),category:p.category||"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added!");}}catch(e){if(addRepeat){var allSlots2=DAYS.concat(ss.map(function(s){return s.id;}));allSlots2.forEach(function(d){setTasks(function(pr){return pr.concat([{id:mkid(),text:inp.trim(),category:"General",done:false,recurring:true,day:d}]);});});setAiSt("Added to all days & sessions");}else{setTasks(function(pr){return pr.concat([{id:mkid(),text:inp.trim(),category:"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added");}}setInp("");setAddRepeat(false);setAiLd(false);setTimeout(function(){setAiSt("");},2000);}
+  async function quickAdd(){if(!inp.trim())return;setAiLd(true);try{var raw=await aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+inp+"\". ONLY JSON:{\"text\":\"t\",\"category\":\"c\"}");var p=JSON.parse(raw.replace(/```json|```/g,"").trim());if(addRepeat){var batch=DAYS.concat(ss.map(function(s){return s.id;})).map(function(d){return{id:mkid(),text:p.text||inp.trim(),category:p.category||"General",done:false,recurring:true,day:d};});setTasks(function(pr){return pr.concat(batch);});setAiSt("Added to all days & sessions!");}else{setTasks(function(pr){return pr.concat([{id:mkid(),text:p.text||inp.trim(),category:p.category||"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added!");}}catch(e){if(addRepeat){var batch2=DAYS.concat(ss.map(function(s){return s.id;})).map(function(d){return{id:mkid(),text:inp.trim(),category:"General",done:false,recurring:true,day:d};});setTasks(function(pr){return pr.concat(batch2);});setAiSt("Added to all days & sessions");}else{setTasks(function(pr){return pr.concat([{id:mkid(),text:inp.trim(),category:"General",done:false,recurring:false,day:addDay}]);});setAiSt("Added");}}setInp("");setAddRepeat(false);setAiLd(false);setTimeout(function(){setAiSt("");},2000);}
   async function processAddBrain(){
     if(!addBrainInp.trim())return;setAddBrainLd(true);setAddBrainResult(null);
     try{
       var raw=await aiCall("Parse rough farm notes into clean tasks. Categories:"+CATS.join(",")+". ONLY JSON:\n{\"tasks\":[{\"text\":\"clean polished task\",\"category\":\"c\",\"recurring\":true_or_false}]}\nMark as recurring:true if the note says every day, daily, always, or similar.\nInput:\""+addBrainInp.replace(/"/g,"'")+"\"");
       var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
-      var parsed=(JSON.parse(mt[0]).tasks||[]);var added=0;
+      var parsed=(JSON.parse(mt[0]).tasks||[]);var added=0;var batch=[];
       parsed.forEach(function(item){
         if(!item.text)return;
-        if(item.recurring){
-          DAYS.concat(ss.map(function(s){return s.id;})).forEach(function(d){setTasks(function(pr){return pr.concat([{id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:true,day:d}]);});});
+        var isRec=item.recurring===true||item.recurring==="true";
+        if(isRec){
+          DAYS.concat(ss.map(function(s){return s.id;})).forEach(function(d){batch.push({id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:true,day:d});});
         }else{
-          setTasks(function(pr){return pr.concat([{id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:false,day:addDay}]);});
+          batch.push({id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:false,day:addDay});
         }
         added++;
       });
+      if(batch.length)setTasks(function(pr){return pr.concat(batch);});
       setAddBrainResult(added>0?"Sorted "+added+" task"+(added>1?"s":"")+"!":"No tasks found — try being more specific.");
     }catch(e){setAddBrainResult("Could not sort — try again.");}
     setAddBrainInp("");setAddBrainLd(false);setTimeout(function(){setAddBrainResult(null);},5000);
@@ -767,26 +769,43 @@ function Main(props){
   async function processBrain(){
     if(!brainInp.trim())return;setBrainLd(true);setBrainResult(null);
     try{
-      var raw=await aiCall("Parse farm input. Today:"+todayStr+". ONLY JSON:\n{\"items\":[{\"type\":\"task|note|observation|harvest|briefing|journal|session\",\"text\":\"t\",\"category\":\"c\",\"crop\":\"if harvest\",\"amount\":\"number if harvest\",\"unit\":\"if harvest\",\"date\":\"MM/DD/YYYY if session\",\"dow\":\"full day name if session\",\"time\":\"time range e.g. 1pm-4pm if session\",\"signup\":\"expected volunteer count if mentioned\"}]}\nFor sessions: parse any date+time mention as a session. Convert natural language dates to MM/DD/YYYY using today's year unless another year is specified.\nInput:\""+brainInp.replace(/"/g,"'")+"\"");
+      var raw=await aiCall("Parse farm input. Today:"+todayStr+". ONLY JSON:\n{\"items\":[{\"type\":\"task|note|observation|harvest|briefing|journal|session\",\"text\":\"t\",\"category\":\"c\",\"recurring\":\"true if task mentions every day/daily/always/each session, else false\",\"crop\":\"if harvest\",\"amount\":\"number if harvest\",\"unit\":\"if harvest\",\"date\":\"MM/DD/YYYY if session\",\"dow\":\"full day name if session\",\"time\":\"time range e.g. 1pm-4pm if session\",\"signup\":\"expected volunteer count if mentioned\"}]}\nFor tasks: set recurring:true ONLY if user says every day, daily, always, each session, or similar repeating language. Otherwise recurring:false.\nFor sessions: parse any date+time mention as a session. Convert natural language dates to MM/DD/YYYY using today's year unless another year is specified.\nInput:\""+brainInp.replace(/"/g,"'")+"\"");
       var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
       var items=(JSON.parse(mt[0]).items||[]);var added={t:0,n:0,o:0,h:0,b:0,j:0,s:0};
+      var newTasks=[];var newNotes=[];var newObs=[];var newHvs=[];var newBriefs=[];var newJournal=[];var newSessions=[];
       items.forEach(function(item){
-        if(item.type==="task"){setTasks(function(pv){return pv.concat([{id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:false,day:TODAY}]);});added.t++;}
-        else if(item.type==="note"){setNotes(function(pv){return pv.concat([{id:mkid(),text:item.text,category:item.category||"General",date:todayStr}]);});added.n++;}
-        else if(item.type==="observation"){setObs(function(pv){return pv.concat([{id:mkid(),text:item.text,category:item.category||"General",date:todayStr}]);});added.o++;}
-        else if(item.type==="harvest"&&parseFloat(item.amount)>0){setHvs(function(pv){return pv.concat([{id:mkid(),session:hSe,label:"",crop:item.crop||"Other",amount:parseFloat(item.amount),unit:item.unit||"lbs",quality:"Good",date:todayStr}]);});added.h++;}
-        else if(item.type==="briefing"){setBriefs(function(pv){return[{id:mkid(),raw:item.text,text:item.text,severity:"heads-up",category:item.category||"General",date:todayStr}].concat(pv);});added.b++;}
-        else if(item.type==="journal"){setMyJournal(function(pv){return[{id:mkid(),raw:brainInp.trim(),text:item.text,date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});added.j++;}
-        else if(item.type==="session"&&item.date){var dowFb=(function(){var p=item.date.split("/");var d=new Date(p[2],p[0]-1,p[1]);return["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];}());setSs(function(pv){return pv.concat([{id:mkid(),date:item.date,dow:item.dow||dowFb,time:item.time||"",signup:parseInt(item.signup)||0}]);});added.s++;}
+        if(item.type==="task"){
+          var isRec=item.recurring===true||item.recurring==="true";
+          if(isRec){
+            DAYS.concat(ss.map(function(s){return s.id;})).forEach(function(d){newTasks.push({id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:true,day:d});});
+          }else{
+            newTasks.push({id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:false,day:TODAY});
+          }
+          added.t++;
+        }
+        else if(item.type==="note"){newNotes.push({id:mkid(),text:item.text,category:item.category||"General",date:todayStr});added.n++;}
+        else if(item.type==="observation"){newObs.push({id:mkid(),text:item.text,category:item.category||"General",date:todayStr});added.o++;}
+        else if(item.type==="harvest"&&parseFloat(item.amount)>0){newHvs.push({id:mkid(),session:hSe,label:"",crop:item.crop||"Other",amount:parseFloat(item.amount),unit:item.unit||"lbs",quality:"Good",date:todayStr});added.h++;}
+        else if(item.type==="briefing"){newBriefs.push({id:mkid(),raw:item.text,text:item.text,severity:"heads-up",category:item.category||"General",date:todayStr});added.b++;}
+        else if(item.type==="journal"){newJournal.push({id:mkid(),raw:brainInp.trim(),text:item.text,date:todayStr,dow:DOW[new Date().getDay()]});added.j++;}
+        else if(item.type==="session"&&item.date){var dowFb=(function(){var p=item.date.split("/");var d=new Date(p[2],p[0]-1,p[1]);return["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];}());newSessions.push({id:mkid(),date:item.date,dow:item.dow||dowFb,time:item.time||"",signup:parseInt(item.signup)||0});added.s++;}
       });
+      if(newTasks.length)setTasks(function(pv){return pv.concat(newTasks);});
+      if(newNotes.length)setNotes(function(pv){return pv.concat(newNotes);});
+      if(newObs.length)setObs(function(pv){return pv.concat(newObs);});
+      if(newHvs.length)setHvs(function(pv){return pv.concat(newHvs);});
+      if(newBriefs.length)setBriefs(function(pv){return newBriefs.concat(pv);});
+      if(newJournal.length)setMyJournal(function(pv){return newJournal.concat(pv);});
+      if(newSessions.length)setSs(function(pv){return pv.concat(newSessions);});
       var parts=[];if(added.t)parts.push(added.t+" task"+(added.t>1?"s":""));if(added.n)parts.push(added.n+" note"+(added.n>1?"s":""));if(added.o)parts.push(added.o+" obs");if(added.h)parts.push(added.h+" harvest"+(added.h>1?"s":""));if(added.b)parts.push(added.b+" briefing"+(added.b>1?"s":""));if(added.j)parts.push(added.j+" journal");if(added.s)parts.push(added.s+" session"+(added.s>1?"s":""));
       setBrainResult(parts.length?"Sorted: "+parts.join(", "):"Nothing parsed — try being more specific.");
     }catch(e){setBrainResult("Could not sort — add manually.");}
     setBrainInp("");setBrainLd(false);setTimeout(function(){setBrainResult(null);},5000);
   }
 
+  function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
   function printCert(v,milestone,type,value){
-    var html="<html><head><title>Certificate</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#faf5ee}.cert{background:linear-gradient(135deg,#fce8d0,#f8dcc0);border:3px solid #c89530;border-radius:20px;padding:50px 60px;text-align:center;max-width:600px;width:100%}.divider{width:60px;height:2px;background:#c89530;margin:16px auto}.sig{margin-top:24px;border-top:1px solid #c89530;padding-top:12px;font-size:11px;color:#9a9088}</style></head><body><div class='cert'><div style='font-size:10px;letter-spacing:0.4em;color:#e8956a;text-transform:uppercase;font-weight:700'>Little Portion Farm</div><div class='divider'></div><div style='font-size:12px;color:#9a9088;margin-bottom:10px'>Certificate of Recognition</div><div style='font-size:60px;margin:14px 0'>"+milestone.icon+"</div><div style='font-size:13px;color:#9a9088;margin-bottom:6px'>This certificate is awarded to</div><div style='font-size:28px;color:#3a3028;margin:12px 0 6px'>"+v.name+"</div><div style='font-size:18px;color:#e8956a;font-weight:700;margin-bottom:10px'>"+milestone.label+"</div><div style='font-size:14px;color:#6a6058;line-height:1.7'>"+milestone.desc+"</div><div style='font-size:12px;color:#9a9088;margin-top:16px'>"+(type==="hours"?value+" volunteer hours":value+" sessions")+" &bull; "+new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})+"</div><div class='sig'>Little Portion Farm &bull; Ellicott City, MD</div></div></body></html>";
+    var html="<html><head><title>Certificate</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#faf5ee}.cert{background:linear-gradient(135deg,#fce8d0,#f8dcc0);border:3px solid #c89530;border-radius:20px;padding:50px 60px;text-align:center;max-width:600px;width:100%}.divider{width:60px;height:2px;background:#c89530;margin:16px auto}.sig{margin-top:24px;border-top:1px solid #c89530;padding-top:12px;font-size:11px;color:#9a9088}</style></head><body><div class='cert'><div style='font-size:10px;letter-spacing:0.4em;color:#e8956a;text-transform:uppercase;font-weight:700'>Little Portion Farm</div><div class='divider'></div><div style='font-size:12px;color:#9a9088;margin-bottom:10px'>Certificate of Recognition</div><div style='font-size:60px;margin:14px 0'>"+escHtml(milestone.icon)+"</div><div style='font-size:13px;color:#9a9088;margin-bottom:6px'>This certificate is awarded to</div><div style='font-size:28px;color:#3a3028;margin:12px 0 6px'>"+escHtml(v.name)+"</div><div style='font-size:18px;color:#e8956a;font-weight:700;margin-bottom:10px'>"+escHtml(milestone.label)+"</div><div style='font-size:14px;color:#6a6058;line-height:1.7'>"+escHtml(milestone.desc)+"</div><div style='font-size:12px;color:#9a9088;margin-top:16px'>"+(type==="hours"?escHtml(value)+" volunteer hours":escHtml(value)+" sessions")+" &bull; "+new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})+"</div><div class='sig'>Little Portion Farm &bull; Ellicott City, MD</div></div></body></html>";
     var w=window.open("","_blank");if(w){w.document.write(html);w.document.close();setTimeout(function(){w.print();},500);}
   }
 
