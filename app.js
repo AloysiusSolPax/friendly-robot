@@ -192,6 +192,28 @@ function SeSel(p){return <select value={p.val} onChange={p.onChange} style={Obje
 
 var MENU=[{k:"myday",l:"My Day",ic:"☀️"},{k:"checklist",l:"Tasks",ic:"✓"},{k:"add",l:"Add",ic:"+"},{k:"harvest",l:"Harvest",ic:"🌾"},{k:"analytics",l:"Analytics",ic:"📊"},{k:"weather",l:"Weather",ic:"🌤"},{k:"volunteers",l:"Team",ic:"👥"},{k:"briefing",l:"Briefing",ic:"⚠️"},{k:"techniques",l:"Guides",ic:"📖"},{k:"notes",l:"Notes",ic:"📋"},{k:"observations",l:"Observe",ic:"👀"},{k:"calendar",l:"Calendar",ic:"📅"},{k:"settings",l:"Settings",ic:"⚙️"},{k:"about",l:"About",ic:"ℹ️"}];
 var QUOTES=[{text:"The best time to plant a tree was 20 years ago. The second best time is now.",author:"Chinese Proverb"},{text:"He who plants a garden plants happiness.",author:"Chinese Proverb"},{text:"To forget how to dig the earth and to tend the soil is to forget ourselves.",author:"Mahatma Gandhi"},{text:"Nature does not hurry, yet everything is accomplished.",author:"Lao Tzu"},{text:"The glory of gardening: hands in the dirt, head in the sun, heart with nature.",author:"Alfred Austin"},{text:"In every walk with nature one receives far more than he seeks.",author:"John Muir"},{text:"Patience is bitter, but its fruit is sweet.",author:"Aristotle"},{text:"Small deeds done are better than great deeds planned.",author:"Peter Marshall"},{text:"The farmer has to be an optimist or he wouldn't still be a farmer.",author:"Will Rogers"},{text:"If you have a garden and a library, you have everything you need.",author:"Marcus Tullius Cicero"}];
+var HOME_QUOTES=[
+  {text:"The land is the great teacher — if we humble ourselves enough to listen.",author:"St. Isidore the Farmer"},
+  {text:"Cultivate the earth and cultivate yourself; the soil teaches what no book can.",author:"St. Isidore the Farmer"},
+  {text:"Let us never tire of doing little things for the love of God, who considers not the magnitude of the work but the love.",author:"St. Thérèse of Lisieux"},
+  {text:"It is not the magnitude of our actions but the amount of love that is put into them that matters.",author:"St. Teresa of Calcutta"},
+  {text:"The best remedy for those who are afraid, lonely, or unhappy is to go outside, somewhere they can be quiet, alone with the heavens, nature, and God.",author:"Anne Frank"},
+  {text:"God writes the Gospel not in the Bible alone, but also on trees, and in the flowers and clouds and stars.",author:"Martin Luther"},
+  {text:"Look at the trees, look at the birds, look at the clouds, look at the stars... and if you have eyes, you will see God.",author:"Osho"},
+  {text:"The love of gardening is a seed once sown that never dies.",author:"Gertrude Jekyll"},
+  {text:"A garden is a grand teacher. It teaches patience and careful watchfulness; it teaches industry and thrift; above all it teaches entire trust.",author:"Gertrude Jekyll"},
+  {text:"The earth is at the same time mother; she is mother of all that is natural, mother of all that is human. She is the mother of all, for contained in her are the seeds of all.",author:"St. Hildegard of Bingen"},
+  {text:"Glance at the sun. See the moon and the stars. Gaze at the beauty of earth's greenings. Now, think. What delight God gives to humankind.",author:"St. Hildegard of Bingen"},
+  {text:"There is no small act of kindness. Every compassionate act makes large the world.",author:"Mary Anne Radmacher"},
+  {text:"To labor is to pray.",author:"St. Benedict of Nursia"},
+  {text:"Ora et Labora — Pray and Work.",author:"Benedictine Motto"},
+  {text:"The fruit of silence is prayer; the fruit of prayer is faith; the fruit of faith is love; the fruit of love is service; the fruit of service is peace.",author:"St. Teresa of Calcutta"},
+  {text:"We must be willing to let go of the life we have planned, so as to have the life that is waiting for us.",author:"Joseph Campbell"},
+  {text:"He who sows sparingly will also reap sparingly, and he who sows bountifully will also reap bountifully.",author:"2 Corinthians 9:6"},
+  {text:"Consider the lilies of the field, how they grow; they neither toil nor spin, yet I tell you, even Solomon in all his glory was not arrayed like one of these.",author:"Matthew 6:28-29"},
+  {text:"The earth produces of itself, first the blade, then the ear, then the full grain in the ear.",author:"Mark 4:28"},
+  {text:"For everything there is a season, and a time for every matter under heaven; a time to plant, and a time to pluck up what is planted.",author:"Ecclesiastes 3:1-2"}
+];
 
 var APP_PW="littleportion";
 var SECRET_PW="AloysiusSolPax";
@@ -568,6 +590,7 @@ function Main(props){
   var[shownMilestones,setShownMilestones]=useState([]);
   var[tab,setTab]=useState("home");
   var[menuOpen,setMenuOpen]=useState(false);
+  var[hqIdx,setHqIdx]=useState(function(){return Math.floor(Math.random()*HOME_QUOTES.length);});
   var[viewDay,setViewDay]=useState(TODAY);
   var[addDay,setAddDay]=useState(TODAY);
   var[inp,setInp]=useState(""); var[aiLd,setAiLd]=useState(false); var[aiSt,setAiSt]=useState("");
@@ -881,6 +904,14 @@ function Main(props){
 
         {tab==="home"&&(
           <div>
+            <div style={{background:"rgba(255,255,255,0.7)",borderRadius:16,padding:"12px 16px",marginBottom:14,border:"1px solid rgba(200,160,100,0.25)",position:"relative"}}>
+              <div style={{fontSize:9,letterSpacing:"0.3em",color:T.peach,textTransform:"uppercase",fontWeight:700,marginBottom:6}}>Today's Reflection</div>
+              <div style={{fontSize:13,color:T.text,lineHeight:1.6,fontStyle:"italic",marginBottom:4}}>"{HOME_QUOTES[hqIdx].text}"</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontSize:11,color:T.peach,fontWeight:600}}>— {HOME_QUOTES[hqIdx].author}</div>
+                <button onClick={function(){var n;do{n=Math.floor(Math.random()*HOME_QUOTES.length);}while(n===hqIdx&&HOME_QUOTES.length>1);setHqIdx(n);}} style={{background:"transparent",border:"1px solid rgba(200,140,80,0.3)",borderRadius:12,padding:"3px 10px",fontSize:10,color:T.textDim,cursor:"pointer",fontFamily:"Georgia,serif"}}>New ↻</button>
+              </div>
+            </div>
             <div style={{background:"linear-gradient(135deg,#fce8d0,#f8dcc0)",borderRadius:24,padding:26,marginBottom:18,position:"relative",overflow:"hidden",boxShadow:T.shadowLg}}>
               <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,"+T.butter+","+T.peach+","+T.lavender+","+T.teal+")"}}/>
               <div style={{textAlign:"center",marginBottom:14}}>
