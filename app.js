@@ -724,9 +724,9 @@ function Main(props){
   async function processBrain(){
     if(!brainInp.trim())return;setBrainLd(true);setBrainResult(null);
     try{
-      var raw=await aiCall("Parse farm input. Today:"+todayStr+". ONLY JSON:\n{\"items\":[{\"type\":\"task|note|observation|harvest|briefing|journal\",\"text\":\"t\",\"category\":\"c\",\"crop\":\"if harvest\",\"amount\":\"number if harvest\",\"unit\":\"if harvest\"}]}\nInput:\""+brainInp.replace(/"/g,"'")+"\"");
+      var raw=await aiCall("Parse farm input. Today:"+todayStr+". ONLY JSON:\n{\"items\":[{\"type\":\"task|note|observation|harvest|briefing|journal|session\",\"text\":\"t\",\"category\":\"c\",\"crop\":\"if harvest\",\"amount\":\"number if harvest\",\"unit\":\"if harvest\",\"date\":\"MM/DD/YYYY if session\",\"dow\":\"full day name if session\",\"time\":\"time range e.g. 1pm-4pm if session\",\"signup\":\"expected volunteer count if mentioned\"}]}\nFor sessions: parse any date+time mention as a session. Convert natural language dates to MM/DD/YYYY using today's year unless another year is specified.\nInput:\""+brainInp.replace(/"/g,"'")+"\"");
       var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
-      var items=(JSON.parse(mt[0]).items||[]);var added={t:0,n:0,o:0,h:0,b:0,j:0};
+      var items=(JSON.parse(mt[0]).items||[]);var added={t:0,n:0,o:0,h:0,b:0,j:0,s:0};
       items.forEach(function(item){
         if(item.type==="task"){setTasks(function(pv){return pv.concat([{id:mkid(),text:item.text,category:item.category||"General",done:false,recurring:false,day:TODAY}]);});added.t++;}
         else if(item.type==="note"){setNotes(function(pv){return pv.concat([{id:mkid(),text:item.text,category:item.category||"General",date:todayStr}]);});added.n++;}
@@ -734,8 +734,9 @@ function Main(props){
         else if(item.type==="harvest"&&parseFloat(item.amount)>0){setHvs(function(pv){return pv.concat([{id:mkid(),session:hSe,label:"",crop:item.crop||"Other",amount:parseFloat(item.amount),unit:item.unit||"lbs",quality:"Good",date:todayStr}]);});added.h++;}
         else if(item.type==="briefing"){setBriefs(function(pv){return[{id:mkid(),raw:item.text,text:item.text,severity:"heads-up",category:item.category||"General",date:todayStr}].concat(pv);});added.b++;}
         else if(item.type==="journal"){setMyJournal(function(pv){return[{id:mkid(),raw:brainInp.trim(),text:item.text,date:todayStr,dow:DOW[new Date().getDay()]}].concat(pv);});added.j++;}
+        else if(item.type==="session"&&item.date){var dowFb=(function(){var p=item.date.split("/");var d=new Date(p[2],p[0]-1,p[1]);return["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];}());setSs(function(pv){return pv.concat([{id:mkid(),date:item.date,dow:item.dow||dowFb,time:item.time||"",signup:parseInt(item.signup)||0}]);});added.s++;}
       });
-      var parts=[];if(added.t)parts.push(added.t+" task"+(added.t>1?"s":""));if(added.n)parts.push(added.n+" note"+(added.n>1?"s":""));if(added.o)parts.push(added.o+" obs");if(added.h)parts.push(added.h+" harvest"+(added.h>1?"s":""));if(added.b)parts.push(added.b+" briefing"+(added.b>1?"s":""));if(added.j)parts.push(added.j+" journal");
+      var parts=[];if(added.t)parts.push(added.t+" task"+(added.t>1?"s":""));if(added.n)parts.push(added.n+" note"+(added.n>1?"s":""));if(added.o)parts.push(added.o+" obs");if(added.h)parts.push(added.h+" harvest"+(added.h>1?"s":""));if(added.b)parts.push(added.b+" briefing"+(added.b>1?"s":""));if(added.j)parts.push(added.j+" journal");if(added.s)parts.push(added.s+" session"+(added.s>1?"s":""));
       setBrainResult(parts.length?"Sorted: "+parts.join(", "):"Nothing parsed — try being more specific.");
     }catch(e){setBrainResult("Could not sort — add manually.");}
     setBrainInp("");setBrainLd(false);setTimeout(function(){setBrainResult(null);},5000);
@@ -836,7 +837,7 @@ function Main(props){
               <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,"+T.peach+","+T.teal+","+T.lavender+","+T.gold+")",borderRadius:"20px 20px 0 0"}}/>
               <Sec>Quick Input</Sec>
               <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.5}}>Type anything — tasks, harvests, notes, observations — sorted automatically.</div>
-              <textarea value={brainInp} onChange={function(e){setBrainInp(e.target.value);}} placeholder="e.g. harvested 5 lbs kale, remind about gate, row 3 looks dry" rows={3} style={ta_s}/>
+              <textarea value={brainInp} onChange={function(e){setBrainInp(e.target.value);}} placeholder="e.g. Thursday April 10 1pm-4pm signup 12, harvested 5 lbs kale, remind about gate" rows={3} style={ta_s}/>
               <button onClick={processBrain} disabled={brainLd||!brainInp.trim()} style={Object.assign({},btn(),{width:"100%",marginTop:10,opacity:(brainLd||!brainInp.trim())?0.4:1})}>{brainLd?"Sorting...":"Sort & Save"}</button>
               {brainResult&&<div style={{marginTop:10,padding:"10px 14px",background:brainResult.startsWith("Sorted")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:brainResult.startsWith("Sorted")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{brainResult}</div>}
             </div>
