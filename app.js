@@ -598,6 +598,8 @@ function Main(props){
   var[calAiInp,setCalAiInp]=useState(""); var[calAiLd,setCalAiLd]=useState(false); var[calAiResult,setCalAiResult]=useState(null);
   var[calMonth,setCalMonth]=useState(function(){var d=new Date();return d.getFullYear()*100+(d.getMonth()+1);});
   var[calSelDay,setCalSelDay]=useState(null);
+  var[sessBrief,setSessBrief]=useState(null); var[sessBriefLd,setSessBriefLd]=useState(false); var[sessBriefId,setSessBriefId]=useState(null);
+  var[volDetail,setVolDetail]=useState(null);
 
   var dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
   var todayQuote=QUOTES[dayOfYear%QUOTES.length];
@@ -724,6 +726,23 @@ function Main(props){
   async function addBrief(){if(!brInp.trim())return;setBrLd(true);if(brUseAi){try{var raw=await aiCall("Farm briefing 2-3 sentences. Severity:heads-up|important|critical. Category from:"+BR_CATS.join(",")+". ONLY JSON:{\"text\":\"t\",\"severity\":\"s\",\"category\":\"c\"}. Issue:\""+brInp+"\"");var p=JSON.parse(raw.replace(/```json|```/g,"").trim());setBriefs(function(pv){return[{id:mkid(),raw:brInp.trim(),text:p.text||brInp.trim(),severity:p.severity||"heads-up",category:p.category||brCat,date:todayStr}].concat(pv);});}catch(e){setBriefs(function(pv){return[{id:mkid(),raw:brInp.trim(),text:brInp.trim(),severity:"heads-up",category:brCat,date:todayStr}].concat(pv);});}}else{setBriefs(function(pv){return[{id:mkid(),raw:brInp.trim(),text:brInp.trim(),severity:"heads-up",category:brCat,date:todayStr}].concat(pv);});}setBrInp("");setBrLd(false);}
   async function genWeekReport(){setWeekRptLd(true);try{var prompt="Warm end-of-week farm report ~150 words for Little Portion Farm.\nJournal:\n";myJournal.slice(0,5).forEach(function(j){prompt+="- "+j.text+"\n";});prompt+="\nVolunteers:"+todayTotal+"\nHarvests:\n";hvs.slice(0,10).forEach(function(h){prompt+="- "+h.crop+":"+h.amount+" "+h.unit+"\n";});prompt+="Tasks:"+dn+"/"+tot;var raw=await aiCall(prompt);setWeekRpt(raw.trim());}catch(e){setWeekRpt("Could not generate.");}setWeekRptLd(false);}
   async function genDebrief(){setDebriefLd(true);setDebrief("");try{var showed=todayTotal,signedUp=todaySU;var names=todayAtt.map(function(e){return e.names;}).filter(Boolean).join(", ");var prompt="Warm friendly 3-sentence end-of-session debrief for Little Portion Farm.\nSigned up:"+signedUp+", Showed:"+showed+(names?", Volunteers:"+names:"")+"\nHarvests:"+todayHvs.map(function(h){return h.amount+" "+h.unit+" of "+h.crop;}).join(", ")+(todayObs.length?"\nObs:"+todayObs.map(function(o){return o.text;}).join("; "):"")+"\nCelebratory, end with gratitude. No subject line.";var raw=await aiCall(prompt);setDebrief(raw.trim());}catch(e){setDebrief("Could not generate.");}setDebriefLd(false);}
+  async function genSessionBrief(s){
+    setSessBriefId(s.id);setSessBriefLd(true);setSessBrief(null);
+    try{
+      var prompt="Create a concise volunteer session briefing sheet for Little Portion Farm.\n";
+      prompt+="Date: "+s.dow+", "+s.date+"\nTime: "+(s.time||"TBD")+"\nExpected Volunteers: "+(s.signup||"TBD")+"\n";
+      if(myWD&&myWD.forecast){var sp=s.date.split("/");var sessDateStr=sp[2]+"-"+sp[0].padStart(2,"0")+"-"+sp[1].padStart(2,"0");var fc=myWD.forecast.find(function(f){return f.date===sessDateStr;});if(fc)prompt+="Weather: "+fc.condition+", High "+fc.hi+"F, Low "+fc.lo+"F"+(fc.precipIn>0?", Rain expected":"")+"\n";}
+      else if(myWD)prompt+="Current Weather: "+myWD.tempF+"F, "+myWD.condition+"\n";
+      var urgB=briefs.filter(function(b){return b.severity==="critical"||b.severity==="important";}).slice(0,5);
+      if(urgB.length){prompt+="Important Reminders:\n";urgB.forEach(function(b){prompt+="- ["+b.severity.toUpperCase()+"] "+b.text+"\n";});}
+      var dayTasks=tasks.filter(function(t){return !t.done;}).slice(0,8);
+      if(dayTasks.length){prompt+="Open Tasks:\n";dayTasks.forEach(function(t){prompt+="- ["+t.category+"] "+t.text+"\n";});}
+      prompt+="\nFormat as a clean briefing sheet with sections: OVERVIEW, WEATHER, KEY REMINDERS, TASKS FOR TODAY. Keep it concise and actionable. Use plain text, no markdown.";
+      var raw=await aiCall(prompt);
+      setSessBrief(raw.trim());
+    }catch(e){setSessBrief("Could not generate briefing.");}
+    setSessBriefLd(false);
+  }
   async function processBrain(){
     if(!brainInp.trim())return;setBrainLd(true);setBrainResult(null);
     try{
@@ -957,11 +976,27 @@ function Main(props){
             {myWD&&myWD.weatherCode>=61&&myWD.weatherCode<=69&&<div style={crd({padding:14,background:"#e8f4f0"})}><div style={{fontSize:12,color:T.teal}}><strong>Rain detected</strong> — consider skipping outdoor watering</div></div>}
             {myWD&&myWD.tempF<=32&&<div style={crd({padding:14,background:"#e8e8f4"})}><div style={{fontSize:12,color:T.lavender}}><strong>Freezing temps</strong> — check frost covers</div></div>}
             {(function(){
+              var todayIdx=DAYS.indexOf(TODAY);
+              var overdueTasks=tasks.filter(function(t){if(t.done||t.recurring)return false;var di=DAYS.indexOf(t.day);return di>=0&&di<todayIdx;});
+              if(overdueTasks.length>0)return <div style={crd({padding:14,background:T.roseBg,border:"1px solid "+T.rose+"33"})}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{width:8,height:8,borderRadius:"50%",background:T.rose}}/><span style={{fontSize:11,color:T.rose,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Overdue ({overdueTasks.length})</span></div>
+                {overdueTasks.slice(0,5).map(function(t){var c=gc(t.category);return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid "+T.rose+"22"}}>
+                  <input type="checkbox" checked={false} onChange={function(){togT(t.id);}} style={{width:16,height:16,accentColor:T.rose,cursor:"pointer"}}/>
+                  <span style={{flex:1,fontSize:12,color:T.textMid}}>{t.text}</span>
+                  <Pill bg={c.bg} color={c.ac}>{t.day.slice(0,3)}</Pill>
+                </div>;})}
+                {overdueTasks.length>5&&<div style={{fontSize:11,color:T.rose,marginTop:6}}>+{overdueTasks.length-5} more</div>}
+              </div>;
+              return null;
+            })()}
+            {(function(){
               var dt=dT(viewDay);var grp=CATS.reduce(function(a,cat){var its=dt.filter(function(t){return t.category===cat;});if(its.length)a[cat]=its;return a;},{});
+              var viewDayIdx=DAYS.indexOf(viewDay);var todayIdx2=DAYS.indexOf(TODAY);var isPastDay=viewDayIdx>=0&&todayIdx2>=0&&viewDayIdx<todayIdx2;
               if(!Object.keys(grp).length)return <div style={{textAlign:"center",color:T.textDim,padding:24,fontStyle:"italic"}}>No tasks yet.</div>;
               return Object.entries(grp).sort(function(a,b){return a[0]==="Important"?-1:1;}).map(function(arr){
                 var cat=arr[0],its=arr[1],c=gc(cat);
-                return <div key={cat} style={crd()}><div style={{padding:"10px 16px",display:"flex",alignItems:"center",borderBottom:"1px solid "+T.border}}><div style={{width:8,height:8,borderRadius:"50%",background:c.ac,marginRight:10}}/><span style={{fontWeight:700,fontSize:11,color:c.ac,letterSpacing:"0.1em",textTransform:"uppercase"}}>{cat}</span><span style={{marginLeft:"auto",fontSize:11,color:T.textDim}}>{its.filter(function(i){return i.done;}).length}/{its.length}</span></div><div style={{padding:"4px 16px 8px"}}>{its.map(function(t,idx){return <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:idx<its.length-1?"1px solid "+T.border:"none"}}><input type="checkbox" checked={t.done} onChange={function(){togT(t.id);}} style={{width:18,height:18,accentColor:c.ac,cursor:"pointer"}}/><span style={{flex:1,fontSize:14,color:t.done?T.textDim:T.text,textDecoration:t.done?"line-through":"none",lineHeight:1.5}}>{t.text}</span><button onClick={function(){delT(t.id);}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16}}>X</button></div>;})}</div></div>;
+                var undone=isPastDay?its.filter(function(i){return!i.done&&!i.recurring;}).length:0;
+                return <div key={cat} style={crd()}><div style={{padding:"10px 16px",display:"flex",alignItems:"center",borderBottom:"1px solid "+T.border}}><div style={{width:8,height:8,borderRadius:"50%",background:c.ac,marginRight:10}}/><span style={{fontWeight:700,fontSize:11,color:c.ac,letterSpacing:"0.1em",textTransform:"uppercase"}}>{cat}</span>{undone>0&&<span style={{marginLeft:6,fontSize:9,color:T.rose,fontWeight:700}}>({undone} overdue)</span>}<span style={{marginLeft:"auto",fontSize:11,color:T.textDim}}>{its.filter(function(i){return i.done;}).length}/{its.length}</span></div><div style={{padding:"4px 16px 8px"}}>{its.map(function(t,idx){var isOverdue=isPastDay&&!t.done&&!t.recurring;return <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:idx<its.length-1?"1px solid "+T.border:"none",background:isOverdue?T.roseBg:"transparent",marginLeft:isOverdue?-16:0,marginRight:isOverdue?-16:0,paddingLeft:isOverdue?16:0,paddingRight:isOverdue?16:0,borderRadius:isOverdue?8:0}}><input type="checkbox" checked={t.done} onChange={function(){togT(t.id);}} style={{width:18,height:18,accentColor:isOverdue?T.rose:c.ac,cursor:"pointer"}}/><span style={{flex:1,fontSize:14,color:t.done?T.textDim:isOverdue?T.rose:T.text,textDecoration:t.done?"line-through":"none",lineHeight:1.5}}>{t.text}</span><button onClick={function(){delT(t.id);}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16}}>X</button></div>;})}</div></div>;
               });
             })()}
           </div>
@@ -1042,7 +1077,30 @@ function Main(props){
                   return <button key={k} onClick={function(){setAnalyticsView(k);}} style={{background:act?T.white:"transparent",color:act?T.peach:T.textDim,border:act?"none":"1.5px solid "+T.border,borderRadius:14,padding:"9px 14px",fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:act?700:400,boxShadow:act?T.shadow:"none"}}>{l}</button>;
                 })}
               </div>
-              {analyticsView==="harvest"&&<div style={crd({padding:18})}><Sec>Harvest - Last 14 Days</Sec><div style={{display:"flex",alignItems:"flex-end",gap:4,height:140,marginBottom:8}}>{harvestByDay.map(function(val,i){var hh=maxH>0?Math.max((val/maxH)*120,val>0?4:0):0;return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%"}}>{val>0&&<div style={{fontSize:8,color:T.peach,marginBottom:2}}>{Math.round(val*10)/10}</div>}<div style={{width:"100%",height:hh,background:val>0?"linear-gradient(180deg,"+T.peach+","+T.gold+")":T.bg2,borderRadius:"4px 4px 0 0"}}/></div>;})}</div><div style={{display:"flex",gap:4,marginBottom:14}}>{dayLabels.map(function(l,i){return <div key={i} style={{flex:1,textAlign:"center",fontSize:7,color:T.textDim}}>{i%2===0?l:""}</div>;})}</div><div style={{display:"flex",gap:12}}><Stat label="Total lbs" value={Math.round(hvs.reduce(function(a,h){return a+h.amount;},0)*10)/10} color={T.peach}/><Stat label="Entries" value={hvs.length} color={T.gold}/><Stat label="Crops" value={Object.keys(cropTotals).length} color={T.green}/></div></div>}
+              {analyticsView==="harvest"&&<div>{(function(){
+                var sessTotals={};hvs.forEach(function(h){sessTotals[h.session]=(sessTotals[h.session]||0)+h.amount;});
+                var bestSid=null;var bestAmt=0;Object.entries(sessTotals).forEach(function(e){if(e[1]>bestAmt){bestAmt=e[1];bestSid=e[0];}});
+                var bestS=bestSid?ss.find(function(s){return s.id===bestSid;}):null;
+                var seasonTotal=Math.round(hvs.reduce(function(a,h){return a+h.amount;},0)*10)/10;
+                return <div>
+                  {bestS&&<div style={crd({padding:16,background:"linear-gradient(135deg,#fce8d0,#f8dcc0)",position:"relative",overflow:"hidden"})}>
+                    <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,"+T.butter+","+T.peach+","+T.gold+")"}}/>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{fontSize:28}}>🏆</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:10,color:T.gold,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:2}}>Best Session</div>
+                        <div style={{fontSize:14,fontWeight:700,color:T.text}}>{bestS.dow}, {bestS.date}</div>
+                        <div style={{fontSize:12,color:T.textDim}}>{Math.round(bestAmt*10)/10} lbs harvested</div>
+                      </div>
+                    </div>
+                  </div>}
+                  <div style={{display:"flex",gap:10,marginBottom:16}}>
+                    <div style={{flex:1,background:T.white,borderRadius:18,padding:"14px 10px",textAlign:"center",boxShadow:T.shadow}}><div style={{fontSize:26,fontWeight:300,color:T.peach}}>{seasonTotal}</div><div style={{fontSize:9,color:T.textDim,textTransform:"uppercase",marginTop:3}}>Season Total lbs</div></div>
+                    <div style={{flex:1,background:T.white,borderRadius:18,padding:"14px 10px",textAlign:"center",boxShadow:T.shadow}}><div style={{fontSize:26,fontWeight:300,color:T.gold}}>{Object.keys(sessTotals).length}</div><div style={{fontSize:9,color:T.textDim,textTransform:"uppercase",marginTop:3}}>Sessions Logged</div></div>
+                    <div style={{flex:1,background:T.white,borderRadius:18,padding:"14px 10px",textAlign:"center",boxShadow:T.shadow}}><div style={{fontSize:26,fontWeight:300,color:T.green}}>{Object.keys(cropTotals).length}</div><div style={{fontSize:9,color:T.textDim,textTransform:"uppercase",marginTop:3}}>Crop Types</div></div>
+                  </div>
+                </div>;
+              })()}<div style={crd({padding:18})}><Sec>Harvest - Last 14 Days</Sec><div style={{display:"flex",alignItems:"flex-end",gap:4,height:140,marginBottom:8}}>{harvestByDay.map(function(val,i){var hh=maxH>0?Math.max((val/maxH)*120,val>0?4:0):0;return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%"}}>{val>0&&<div style={{fontSize:8,color:T.peach,marginBottom:2}}>{Math.round(val*10)/10}</div>}<div style={{width:"100%",height:hh,background:val>0?"linear-gradient(180deg,"+T.peach+","+T.gold+")":T.bg2,borderRadius:"4px 4px 0 0"}}/></div>;})}</div><div style={{display:"flex",gap:4,marginBottom:14}}>{dayLabels.map(function(l,i){return <div key={i} style={{flex:1,textAlign:"center",fontSize:7,color:T.textDim}}>{i%2===0?l:""}</div>;})}</div><div style={{display:"flex",gap:12}}><Stat label="Total lbs" value={Math.round(hvs.reduce(function(a,h){return a+h.amount;},0)*10)/10} color={T.peach}/><Stat label="Entries" value={hvs.length} color={T.gold}/><Stat label="Crops" value={Object.keys(cropTotals).length} color={T.green}/></div></div></div>}
               {analyticsView==="attendance"&&<div style={crd({padding:18})}><Sec>Attendance - Last 14 Days</Sec><div style={{display:"flex",alignItems:"flex-end",gap:4,height:140,marginBottom:8}}>{attByDay.map(function(val,i){var hh=maxA>0?Math.max((val/maxA)*120,val>0?4:0):0;return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%"}}>{val>0&&<div style={{fontSize:8,color:T.teal,marginBottom:2}}>{val}</div>}<div style={{width:"100%",height:hh,background:val>0?"linear-gradient(180deg,"+T.teal+","+T.green+")":T.bg2,borderRadius:"4px 4px 0 0"}}/></div>;})}</div><div style={{display:"flex",gap:4,marginBottom:14}}>{dayLabels.map(function(l,i){return <div key={i} style={{flex:1,textAlign:"center",fontSize:7,color:T.textDim}}>{i%2===0?l:""}</div>;})}</div><div style={{display:"flex",gap:12}}><Stat label="Total Showed" value={allAtt.reduce(function(a,e){return a+e.count;},0)} color={T.teal}/><Stat label="Sessions" value={allAtt.length} color={T.lavender}/><Stat label="Roster" value={vols.length} color={T.gold}/></div></div>}
               {analyticsView==="tasks"&&<div><div style={crd({padding:18})}><Sec>Task Completion</Sec><div style={{display:"flex",alignItems:"center",justifyContent:"center",marginBottom:16}}><div style={{width:120,height:120,borderRadius:"50%",background:"conic-gradient("+T.green+" "+(pct*3.6)+"deg, "+T.bg2+" 0deg)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.shadowLg}}><div style={{width:90,height:90,borderRadius:"50%",background:T.white,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}><div style={{fontSize:28,fontWeight:700,color:T.green}}>{pct}%</div><div style={{fontSize:10,color:T.textDim}}>{dn}/{tot}</div></div></div></div>{CATS.map(function(cat){var ct=tasks.filter(function(t){return t.category===cat;});if(!ct.length)return null;var cd=ct.filter(function(t){return t.done;}).length;var cp=Math.round((cd/ct.length)*100);var c=gc(cat);return <div key={cat} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid "+T.border}}><div style={{width:8,height:8,borderRadius:"50%",background:c.ac}}/><span style={{flex:1,fontSize:13,color:T.text}}>{cat}</span><span style={{fontSize:12,color:T.textDim}}>{cd}/{ct.length}</span><div style={{width:60,height:6,background:T.bg2,borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:cp+"%",background:c.ac,borderRadius:3}}/></div><span style={{fontSize:12,fontWeight:700,color:c.ac,width:35,textAlign:"right"}}>{cp}%</span></div>;})}</div><div style={crd({padding:18})}><Sec>Activity</Sec><div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>{[{v:notes.length,l:"Notes",c:T.peach},{v:obs.length,l:"Observations",c:T.lavender},{v:myJournal.length,l:"Journal",c:T.teal},{v:briefs.length,l:"Briefings",c:T.rose}].map(function(item){return <div key={item.l} style={{background:T.bg2,borderRadius:14,padding:14,textAlign:"center"}}><div style={{fontSize:28,fontWeight:300,color:item.c}}>{item.v}</div><div style={{fontSize:10,color:T.textDim,textTransform:"uppercase",marginTop:4}}>{item.l}</div></div>;})}</div></div></div>}
               {analyticsView==="crops"&&<div><div style={crd({padding:18})}><Sec>Harvest by Crop</Sec>{cropEntries.length===0&&<div style={{textAlign:"center",color:T.textDim,fontStyle:"italic"}}>No harvests yet.</div>}{cropEntries.map(function(arr){var crop=arr[0],amount=arr[1];var cc=gcc(crop);var pb=Math.round((amount/maxCrop)*100);return <div key={crop} style={{marginBottom:12}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{fontSize:14,fontWeight:600,color:cc.ac,flex:1}}>{crop}</span><span style={{fontSize:14,fontWeight:700,color:T.text}}>{Math.round(amount*10)/10}</span></div><div style={{height:10,background:T.bg2,borderRadius:6,overflow:"hidden"}}><div style={{height:"100%",width:pb+"%",background:cc.ac,borderRadius:6}}/></div></div>;})}</div>{Object.keys(obsCats).length>0&&<div style={crd({padding:18})}><Sec>Observations by Type</Sec>{Object.entries(obsCats).sort(function(a,b){return b[1]-a[1];}).map(function(arr){var cat=arr[0],count=arr[1];var c=gc(cat);return <div key={cat} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid "+T.border}}><div style={{width:8,height:8,borderRadius:"50%",background:c.ac}}/><span style={{flex:1,fontSize:13,color:T.text}}>{cat}</span><span style={{fontSize:16,fontWeight:700,color:c.ac}}>{count}</span></div>;})}</div>}</div>}
@@ -1156,7 +1214,52 @@ function Main(props){
                   <button onClick={addVol} disabled={!vNm.trim()} style={Object.assign({},btn(),{opacity:!vNm.trim()?0.4:1})}>+ Add Volunteer</button>
                 </div>
                 {vols.length===0&&<div style={{textAlign:"center",color:T.textDim,fontStyle:"italic",padding:20}}>No volunteers yet.</div>}
-                {vols.map(function(v){var ec=EXP_C[v.experience];return <div key={v.id} style={crd({padding:"14px 16px",display:"flex",alignItems:"center",gap:12})}><div style={{width:40,height:40,borderRadius:"50%",background:ec.bg,border:"2px solid "+ec.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:ec.tx,flexShrink:0,fontWeight:700}}>{v.name.charAt(0)}</div><div style={{flex:1}}><div style={{fontWeight:600,fontSize:14,color:T.text}}>{v.name}</div><div style={{display:"flex",gap:6,marginTop:4}}><Pill bg={ec.bg} color={ec.tx}>{v.experience}</Pill></div></div><div style={{textAlign:"center"}}><div style={{fontSize:20,fontWeight:300,color:T.peach}}>{vSC(v.id)}</div><div style={{fontSize:9,color:T.textDim}}>sessions</div></div><button onClick={function(){setVols(function(pv){return pv.filter(function(x){return x.id!==v.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16}}>X</button></div>;})}
+                {vols.map(function(v){
+                  var ec=EXP_C[v.experience];
+                  var isOpen=volDetail===v.id;
+                  var vSess=getVolSessions(v.id);
+                  var vHrs=getVolHours(v.id);
+                  var vAttRecs=Object.entries(att).filter(function(entry){return(entry[1]||[]).some(function(e){return(e.volIds||[]).includes(v.id);});});
+                  var lastSessDate=null;
+                  vAttRecs.forEach(function(entry){entry[1].forEach(function(e){if((e.volIds||[]).includes(v.id)&&e.date){if(!lastSessDate||new Date(e.date)>new Date(lastSessDate))lastSessDate=e.date;}});});
+                  var volCrops={};
+                  vAttRecs.forEach(function(entry){var sid=entry[0];hvs.filter(function(h){return h.session===sid;}).forEach(function(h){volCrops[h.crop]=(volCrops[h.crop]||0)+h.amount;});});
+                  var volCropEntries=Object.entries(volCrops).sort(function(a,b){return b[1]-a[1];});
+                  return <div key={v.id} style={crd({overflow:"hidden"})}>
+                    <div onClick={function(){setVolDetail(function(prev){return prev===v.id?null:v.id;});}} style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+                      <div style={{width:40,height:40,borderRadius:"50%",background:ec.bg,border:"2px solid "+ec.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:ec.tx,flexShrink:0,fontWeight:700}}>{v.name.charAt(0)}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:600,fontSize:14,color:T.text}}>{v.name}</div>
+                        <div style={{display:"flex",gap:6,marginTop:4,alignItems:"center"}}>
+                          <Pill bg={ec.bg} color={ec.tx}>{v.experience}</Pill>
+                          {lastSessDate&&<span style={{fontSize:10,color:T.textDim}}>Last: {lastSessDate}</span>}
+                        </div>
+                      </div>
+                      <div style={{textAlign:"center"}}><div style={{fontSize:20,fontWeight:300,color:T.peach}}>{vSC(v.id)}</div><div style={{fontSize:9,color:T.textDim}}>sessions</div></div>
+                      <span style={{color:T.textDim,fontSize:12}}>{isOpen?"▲":"▼"}</span>
+                    </div>
+                    {isOpen&&<div style={{borderTop:"1px solid "+T.border,padding:"14px 16px"}}>
+                      <div style={{display:"flex",gap:10,marginBottom:14}}>
+                        <div style={{flex:1,background:T.bg2,borderRadius:12,padding:"10px 8px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:300,color:T.teal}}>{vHrs}</div><div style={{fontSize:9,color:T.textDim,marginTop:2}}>Hours</div></div>
+                        <div style={{flex:1,background:T.bg2,borderRadius:12,padding:"10px 8px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:300,color:T.peach}}>{vSess}</div><div style={{fontSize:9,color:T.textDim,marginTop:2}}>Sessions</div></div>
+                        <div style={{flex:1,background:T.bg2,borderRadius:12,padding:"10px 8px",textAlign:"center"}}><div style={{fontSize:20,fontWeight:300,color:T.gold}}>{volCropEntries.length}</div><div style={{fontSize:9,color:T.textDim,marginTop:2}}>Crops</div></div>
+                      </div>
+                      {v.skills&&v.skills.length>0&&<div style={{marginBottom:12}}>
+                        <div style={{fontSize:10,color:T.teal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Skills</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{v.skills.map(function(sk){return <Pill key={sk} bg={T.tealBg} color={T.teal}>{sk}</Pill>;})}</div>
+                      </div>}
+                      {volCropEntries.length>0&&<div style={{marginBottom:12}}>
+                        <div style={{fontSize:10,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Crops Worked</div>
+                        {volCropEntries.slice(0,5).map(function(arr){var cc=gcc(arr[0]);return <div key={arr[0]} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0"}}><div style={{width:6,height:6,borderRadius:"50%",background:cc.ac}}/><span style={{flex:1,fontSize:12,color:T.textMid}}>{arr[0]}</span><span style={{fontSize:12,fontWeight:600,color:cc.ac}}>{Math.round(arr[1]*10)/10} lbs</span></div>;})}
+                      </div>}
+                      {vAttRecs.length>0&&<div>
+                        <div style={{fontSize:10,color:T.lavender,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Recent Sessions</div>
+                        {vAttRecs.slice(0,5).map(function(entry){var sid=entry[0];var sessObj=ss.find(function(s){return s.id===sid;});if(!sessObj)return null;return <div key={sid} style={{fontSize:12,color:T.textMid,padding:"3px 0"}}>{sessObj.dow}, {sessObj.date} — {sessObj.time||""}</div>;})}
+                      </div>}
+                      <button onClick={function(e){e.stopPropagation();setVols(function(pv){return pv.filter(function(x){return x.id!==v.id;});});}} style={Object.assign({},btn2(T.rose),{width:"100%",marginTop:12,fontSize:11})}>Remove Volunteer</button>
+                    </div>}
+                  </div>;
+                })}
               </div>
             )}
             {vT==="hours"&&(
@@ -1410,12 +1513,26 @@ function Main(props){
                 <button onClick={addSession} disabled={!calDate||!calTime.trim()} style={Object.assign({},btn(),{width:"100%",opacity:(!calDate||!calTime.trim())?0.4:1})}>Save Session</button>
               </div>}
               {upcoming.length===0&&<div style={{color:T.textDim,fontSize:14,fontStyle:"italic",textAlign:"center",padding:"12px 0"}}>No upcoming sessions. Add one above.</div>}
-              {upcoming.map(function(s){return <div key={s.id} style={{background:T.bg2,borderRadius:14,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div>
-                  <div style={{fontWeight:700,color:T.peach,fontSize:15}}>{s.dow}, {s.date}</div>
-                  <div style={{fontSize:13,color:T.textMid,marginTop:2}}>{s.time}{s.signup?<span style={{color:T.textDim}}> &middot; {s.signup} expected</span>:null}</div>
+              {upcoming.map(function(s){return <div key={s.id} style={{background:T.bg2,borderRadius:14,marginBottom:10,overflow:"hidden"}}>
+                <div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div>
+                    <div style={{fontWeight:700,color:T.peach,fontSize:15}}>{s.dow}, {s.date}</div>
+                    <div style={{fontSize:13,color:T.textMid,marginTop:2}}>{s.time}{s.signup?<span style={{color:T.textDim}}> &middot; {s.signup} expected</span>:null}</div>
+                  </div>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <button onClick={function(){genSessionBrief(s);}} disabled={sessBriefLd&&sessBriefId===s.id} style={Object.assign({},btn2(T.teal),{fontSize:10,padding:"5px 10px"})}>{sessBriefLd&&sessBriefId===s.id?"...":"Brief"}</button>
+                    <button onClick={function(){delSession(s.id);}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16,padding:"4px 8px"}} title="Delete">&#x2715;</button>
+                  </div>
                 </div>
-                <button onClick={function(){delSession(s.id);}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16,padding:"4px 8px"}} title="Delete">&#x2715;</button>
+                {sessBrief&&sessBriefId===s.id&&<div style={{borderTop:"1px solid "+T.border,padding:"14px 16px"}}>
+                  <div style={{fontSize:10,color:T.teal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Session Briefing</div>
+                  <div style={{background:T.white,borderRadius:12,padding:14,fontSize:13,color:T.text,lineHeight:1.7,whiteSpace:"pre-wrap",fontFamily:"Georgia,serif",border:"1px solid "+T.border}}>{sessBrief}</div>
+                  <div style={{display:"flex",gap:8,marginTop:10}}>
+                    <button onClick={function(){try{navigator.clipboard.writeText(sessBrief);}catch(e){}}} style={Object.assign({},btn(T.teal,"#fff"),{flex:1,fontSize:11,padding:"8px 12px"})}>Copy</button>
+                    <button onClick={function(){window.print();}} style={Object.assign({},btn2(T.lavender),{flex:1,fontSize:11,padding:"8px 12px"})}>Print</button>
+                    <button onClick={function(){setSessBrief(null);setSessBriefId(null);}} style={Object.assign({},btn2(),{fontSize:11,padding:"8px 12px"})}>Close</button>
+                  </div>
+                </div>}
               </div>;})}
             </div>
             <div style={crd({padding:20,marginTop:0})}>
