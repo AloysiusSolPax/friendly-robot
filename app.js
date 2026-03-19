@@ -1712,12 +1712,12 @@ function Main(props){
                 <div style={{textAlign:"center",flex:"1 1 140px",minWidth:140}}>
                   <div style={{fontSize:12,fontWeight:700,color:T.textMid,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Farm Website</div>
                   <img src={"https://api.qrserver.com/v1/create-qr-code/?data="+encodeURIComponent("https://www.littleportionfarm.org")+"&size=180x180&color=3a3028&bgcolor=ffffff"} alt="Farm Website QR Code" style={{width:160,height:160,borderRadius:10,display:"block",margin:"0 auto 8px"}}/>
-                  <div style={{fontSize:11,color:T.textDim,wordBreak:"break-all"}}>littleportionfarm.org</div>
+                  <a href="https://www.littleportionfarm.org" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:T.teal,wordBreak:"break-all",textDecoration:"underline"}}>littleportionfarm.org</a>
                 </div>
                 <div style={{textAlign:"center",flex:"1 1 140px",minWidth:140}}>
                   <div style={{fontSize:12,fontWeight:700,color:T.textMid,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Sign Up to Volunteer</div>
                   <img src={"https://api.qrserver.com/v1/create-qr-code/?data="+encodeURIComponent("https://www.signupgenius.com/go/9040F4EAAA82EA3FF2-march#/")+"&size=180x180&color=3a3028&bgcolor=ffffff"} alt="Sign-Up Genius QR Code" style={{width:160,height:160,borderRadius:10,display:"block",margin:"0 auto 8px"}}/>
-                  <div style={{fontSize:11,color:T.textDim}}>Sign-Up Genius</div>
+                  <a href="https://www.signupgenius.com/go/9040F4EAAA82EA3FF2-march#/" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:T.teal,wordBreak:"break-all",textDecoration:"underline"}}>signupgenius.com/go/9040F4EAAA82EA3FF2-march</a>
                 </div>
               </div>
             </div>
