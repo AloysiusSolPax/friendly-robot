@@ -190,7 +190,7 @@ function Sec(p){return <div style={{fontSize:11,color:T.peach,fontWeight:700,tex
 function Lbl(p){return <div style={{fontSize:10,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6}}>{p.children}</div>;}
 function SeSel(p){return <select value={p.val} onChange={p.onChange} style={Object.assign({},inp_s,p.style||{})}><optgroup label="Sessions">{p.ss.map(function(s){return <option key={s.id} value={s.id}>{sLbl(s)}</option>;})}</optgroup><optgroup label="Days">{DAYS.map(function(d){return <option key={d} value={d}>{d}</option>;})}</optgroup></select>;}
 
-var MENU=[{k:"myday",l:"My Day",ic:"☀️"},{k:"checklist",l:"Tasks",ic:"✓"},{k:"add",l:"Add",ic:"+"},{k:"harvest",l:"Harvest",ic:"🌾"},{k:"analytics",l:"Analytics",ic:"📊"},{k:"weather",l:"Weather",ic:"🌤"},{k:"volunteers",l:"Team",ic:"👥"},{k:"briefing",l:"Briefing",ic:"⚠️"},{k:"techniques",l:"Guides",ic:"📖"},{k:"notes",l:"Notes",ic:"📋"},{k:"observations",l:"Observe",ic:"👀"},{k:"calendar",l:"Calendar",ic:"📅"},{k:"settings",l:"Settings",ic:"⚙️"}];
+var MENU=[{k:"myday",l:"My Day",ic:"☀️"},{k:"checklist",l:"Tasks",ic:"✓"},{k:"add",l:"Add",ic:"+"},{k:"harvest",l:"Harvest",ic:"🌾"},{k:"analytics",l:"Analytics",ic:"📊"},{k:"weather",l:"Weather",ic:"🌤"},{k:"volunteers",l:"Team",ic:"👥"},{k:"briefing",l:"Briefing",ic:"⚠️"},{k:"techniques",l:"Guides",ic:"📖"},{k:"notes",l:"Notes",ic:"📋"},{k:"observations",l:"Observe",ic:"👀"},{k:"calendar",l:"Calendar",ic:"📅"},{k:"settings",l:"Settings",ic:"⚙️"},{k:"about",l:"About",ic:"ℹ️"}];
 var QUOTES=[{text:"The best time to plant a tree was 20 years ago. The second best time is now.",author:"Chinese Proverb"},{text:"He who plants a garden plants happiness.",author:"Chinese Proverb"},{text:"To forget how to dig the earth and to tend the soil is to forget ourselves.",author:"Mahatma Gandhi"},{text:"Nature does not hurry, yet everything is accomplished.",author:"Lao Tzu"},{text:"The glory of gardening: hands in the dirt, head in the sun, heart with nature.",author:"Alfred Austin"},{text:"In every walk with nature one receives far more than he seeks.",author:"John Muir"},{text:"Patience is bitter, but its fruit is sweet.",author:"Aristotle"},{text:"Small deeds done are better than great deeds planned.",author:"Peter Marshall"},{text:"The farmer has to be an optimist or he wouldn't still be a farmer.",author:"Will Rogers"},{text:"If you have a garden and a library, you have everything you need.",author:"Marcus Tullius Cicero"}];
 
 var APP_PW="littleportion";
@@ -1650,6 +1650,76 @@ function Main(props){
               </div>
               <div style={{fontSize:12,color:T.textMid,marginBottom:10,lineHeight:1.5}}>On a new device, tap <b>Pull from Cloud</b> to load all your farm data from Firebase.</div>
               <SyncButton/>
+            </div>
+          </div>
+        )}
+
+        {tab==="about"&&(
+          <div style={{padding:"0 0 40px"}}>
+            <div style={{padding:"18px 20px 10px",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:22}}>ℹ️</span>
+              <span style={{fontSize:20,fontWeight:800,color:T.text}}>About Little Portion Farm</span>
+            </div>
+
+            <div style={crd({padding:20,marginBottom:16})}>
+              <Sec>Our Farm</Sec>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:"0 0 10px"}}>Little Portion Farm is a working 10-acre farm that serves as both an agro-ecosystem and a place of ministry for the Franciscan Friars Conventual. We grow a variety of vegetables and tend to the land using sustainable, regenerative, and traditional methods.</p>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:0}}>The farm is a place of community, prayer, and learning — open to volunteers, neighbors, and friends of the mission.</p>
+            </div>
+
+            <div style={crd({padding:20,marginBottom:16})}>
+              <Sec>Our Team</Sec>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:"0 0 14px"}}>Our farm depends on the generous help of volunteers — people of all backgrounds who come to work the land, learn, and serve.</p>
+              <div style={{borderTop:"1px solid "+T.border,paddingTop:14,marginBottom:14}}>
+                <div style={{fontSize:13,fontWeight:700,color:T.teal,marginBottom:3}}>Matt Jones — Farm Manager</div>
+                <p style={{fontSize:13,color:T.text,lineHeight:1.6,margin:0}}>Matt has a background in sustainable agriculture and has been stewarding Little Portion Farm for several years. He leads the farming operations and volunteer coordination.</p>
+              </div>
+              <div style={{borderTop:"1px solid "+T.border,paddingTop:14}}>
+                <div style={{fontSize:13,fontWeight:700,color:T.teal,marginBottom:3}}>Kelly Neale — Assistant Farm Manager</div>
+                <p style={{fontSize:13,color:T.text,lineHeight:1.6,margin:0}}>Kelly supports day-to-day farm work and volunteer programs.</p>
+              </div>
+            </div>
+
+            <div style={crd({padding:20,marginBottom:16})}>
+              <Sec>Our Partners</Sec>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:13,fontWeight:700,color:T.gold,marginBottom:3}}>Mary's Land Farm</div>
+                <p style={{fontSize:13,color:T.text,lineHeight:1.6,margin:0}}>A neighboring Franciscan farm community that shares resources, values, and mission with Little Portion.</p>
+              </div>
+              <div style={{borderTop:"1px solid "+T.border,paddingTop:14}}>
+                <div style={{fontSize:13,fontWeight:700,color:T.gold,marginBottom:3}}>Franciscan Center of Baltimore</div>
+                <p style={{fontSize:13,color:T.text,lineHeight:1.6,margin:0}}>An urban ministry that receives some of our harvest to help feed those in need.</p>
+              </div>
+            </div>
+
+            <div style={crd({padding:20,marginBottom:16})}>
+              <Sec>Our Friars</Sec>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:"0 0 10px"}}>Little Portion Farm is run by the Franciscan Friars Conventual, a branch of the Franciscan family founded in the spirit of St. Francis of Assisi.</p>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:"0 0 10px"}}>The name "Little Portion" refers to the Portiuncula — the small chapel in Italy that St. Francis deeply loved and where he gathered his early community.</p>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:0}}>The friars here live out the Franciscan charism of poverty, fraternity, and care for creation, guided by the Justice, Peace, and Integrity of Creation (JPIC) Ministry.</p>
+            </div>
+
+            <div style={crd({padding:20,marginBottom:16})}>
+              <Sec>Our Patron</Sec>
+              <div style={{fontSize:13,fontWeight:700,color:T.peach,marginBottom:8}}>Blessed Giles of Assisi — Feast Day: April 23</div>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:"0 0 10px"}}>Blessed Giles of Assisi was one of the earliest companions of St. Francis. He joined Francis only weeks after Bernardo da Quintavalle, making him the third friar of the Order.</p>
+              <p style={{fontSize:14,color:T.text,lineHeight:1.65,margin:0}}>Giles was known for his contemplative nature, his manual labor, and his deep wisdom. He spent years as a pilgrim and hermit, and was known for the simplicity and joy with which he lived.</p>
+            </div>
+
+            <div style={crd({padding:20})}>
+              <Sec>Connect With Us</Sec>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap",justifyContent:"center"}}>
+                <div style={{textAlign:"center",flex:"1 1 140px",minWidth:140}}>
+                  <div style={{fontSize:12,fontWeight:700,color:T.textMid,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Farm Website</div>
+                  <img src={"https://api.qrserver.com/v1/create-qr-code/?data="+encodeURIComponent("https://www.littleportionfarm.org")+"&size=180x180&color=3a3028&bgcolor=ffffff"} alt="Farm Website QR Code" style={{width:160,height:160,borderRadius:10,display:"block",margin:"0 auto 8px"}}/>
+                  <div style={{fontSize:11,color:T.textDim,wordBreak:"break-all"}}>littleportionfarm.org</div>
+                </div>
+                <div style={{textAlign:"center",flex:"1 1 140px",minWidth:140}}>
+                  <div style={{fontSize:12,fontWeight:700,color:T.textMid,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Sign Up to Volunteer</div>
+                  <img src={"https://api.qrserver.com/v1/create-qr-code/?data="+encodeURIComponent("https://www.signupgenius.com/go/9040F4EAAA82EA3FF2-march#/")+"&size=180x180&color=3a3028&bgcolor=ffffff"} alt="Sign-Up Genius QR Code" style={{width:160,height:160,borderRadius:10,display:"block",margin:"0 auto 8px"}}/>
+                  <div style={{fontSize:11,color:T.textDim}}>Sign-Up Genius</div>
+                </div>
+              </div>
             </div>
           </div>
         )}
