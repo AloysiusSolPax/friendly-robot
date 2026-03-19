@@ -595,6 +595,7 @@ function Main(props){
   var[milestoneAlerts,setMilestoneAlerts]=useState([]);
   var[certVol,setCertVol]=useState(null);
   var[calShow,setCalShow]=useState(false); var[calDate,setCalDate]=useState(""); var[calTime,setCalTime]=useState(""); var[calSig,setCalSig]=useState(""); var[calExpanded,setCalExpanded]=useState({});
+  var[calAiInp,setCalAiInp]=useState(""); var[calAiLd,setCalAiLd]=useState(false); var[calAiResult,setCalAiResult]=useState(null);
 
   var dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
   var todayQuote=QUOTES[dayOfYear%QUOTES.length];
@@ -1287,7 +1288,33 @@ function Main(props){
           }
           function delSession(id){setSs(function(pv){return pv.filter(function(s){return s.id!==id;});});}
           function toggleExp(id){setCalExpanded(function(pv){var n=Object.assign({},pv);n[id]=!n[id];return n;});}
+          async function parseCalSessions(){
+            if(!calAiInp.trim())return;
+            setCalAiLd(true);setCalAiResult(null);
+            try{
+              var raw=await aiCall("Extract ALL farm session dates from this Sign-Up Genius text. Today:"+todayStr+". Return ONLY JSON:\n{\"sessions\":[{\"date\":\"MM/DD/YYYY\",\"dow\":\"full day name\",\"time\":\"time range e.g. 1pm-4pm\",\"signup\":number_or_0}]}\nConvert all natural language dates to MM/DD/YYYY. If no year given use current year. Extract every date/time mentioned.\nInput:\""+calAiInp.replace(/"/g,"'")+"\"");
+              var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
+              var parsed=(JSON.parse(mt[0]).sessions||[]);
+              var added=0;
+              parsed.forEach(function(item){
+                if(!item.date)return;
+                var dowFb=(function(){var p=item.date.split("/");var d=new Date(p[2],p[0]-1,p[1]);return["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];}());
+                setSs(function(pv){return pv.concat([{id:mkid(),date:item.date,dow:item.dow||dowFb,time:item.time||"",signup:parseInt(item.signup)||0}]);});
+                added++;
+              });
+              setCalAiResult(added>0?"Added "+added+" session"+(added>1?"s":"")+"!":"No sessions found — try pasting the full Sign-Up Genius text.");
+            }catch(e){setCalAiResult("Could not parse — try again or add manually.");}
+            setCalAiInp("");setCalAiLd(false);
+            setTimeout(function(){setCalAiResult(null);},5000);
+          }
           return <div>
+            <div style={crd({padding:20,marginBottom:0})}>
+              <Sec>Paste from Sign-Up Genius</Sec>
+              <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Paste any text with dates and times — AI will find all the sessions automatically.</div>
+              <textarea value={calAiInp} onChange={function(e){setCalAiInp(e.target.value);}} placeholder="e.g. Thursday April 10 · 1pm-4pm (12 spots), Saturday April 12 · 8:30am-2pm (20 spots)..." rows={4} style={Object.assign({},ta_s,{marginBottom:10})}/>
+              <button onClick={parseCalSessions} disabled={calAiLd||!calAiInp.trim()} style={Object.assign({},btn(),{width:"100%",opacity:(calAiLd||!calAiInp.trim())?0.4:1})}>{calAiLd?"Finding sessions...":"Add Sessions with AI"}</button>
+              {calAiResult&&<div style={{marginTop:10,padding:"10px 14px",background:calAiResult.startsWith("Added")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:calAiResult.startsWith("Added")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{calAiResult}</div>}
+            </div>
             <div style={crd({padding:20})}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
                 <Sec style={{marginBottom:0}}>Upcoming Sessions</Sec>
