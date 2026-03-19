@@ -51,7 +51,7 @@ var MW_CODES={"Clear":0,"Mostly Clear":1,"Partly Cloudy":2,"Overcast":3,"Foggy":
 var BR_CATS=["General","Harvesting","Watering","Packing","Cleanup","Tools","Animal Care","Safety"];
 var TECH_CROPS=["None","Kale","Spinach","Arugula","Strawberries","Tomatoes","Lettuce","Herbs","Other"];
 var TECH_TASKS=["None","Harvesting","Watering","Packing","Planting","Cleanup","Other"];
-var DEF_SESS=[{id:"s1",date:"03/17/2026",dow:"Tuesday",time:"10am-1pm"},{id:"s2",date:"03/18/2026",dow:"Wednesday",time:"1pm-4pm"},{id:"s3",date:"03/19/2026",dow:"Thursday",time:"1pm-4pm"},{id:"s4",date:"03/19/2026",dow:"Thursday",time:"4pm-7pm"},{id:"s5",date:"03/20/2026",dow:"Friday",time:"1pm-4pm"},{id:"s6",date:"03/21/2026",dow:"Saturday",time:"8:30am-2pm"},{id:"s7",date:"03/26/2026",dow:"Thursday",time:"1pm-4pm"},{id:"s8",date:"03/26/2026",dow:"Thursday",time:"4pm-7pm"},{id:"s9",date:"03/27/2026",dow:"Friday",time:"1pm-4pm"},{id:"s10",date:"03/28/2026",dow:"Saturday",time:"8:30am-2pm"},{id:"s11",date:"03/31/2026",dow:"Tuesday",time:"10am-1pm"}];
+var DEF_SESS=[{id:"s1",date:"03/17/2026",dow:"Tuesday",time:"10am-1pm",signup:9},{id:"s2",date:"03/18/2026",dow:"Wednesday",time:"1pm-4pm",signup:6},{id:"s3",date:"03/19/2026",dow:"Thursday",time:"1pm-4pm",signup:2},{id:"s4",date:"03/19/2026",dow:"Thursday",time:"4pm-7pm",signup:8},{id:"s5",date:"03/20/2026",dow:"Friday",time:"1pm-4pm",signup:4},{id:"s6",date:"03/21/2026",dow:"Saturday",time:"8:30am-2pm",signup:22},{id:"s7",date:"03/26/2026",dow:"Thursday",time:"1pm-4pm",signup:1},{id:"s8",date:"03/26/2026",dow:"Thursday",time:"4pm-7pm",signup:9},{id:"s9",date:"03/27/2026",dow:"Friday",time:"1pm-4pm",signup:3},{id:"s10",date:"03/28/2026",dow:"Saturday",time:"8:30am-2pm",signup:13},{id:"s11",date:"03/31/2026",dow:"Tuesday",time:"10am-1pm",signup:1}];
 var SIG_MAP={s1:9,s2:6,s3:2,s4:8,s5:4,s6:22,s7:1,s8:9,s9:3,s10:13,s11:1};
 var MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -171,7 +171,7 @@ function Sec(p){return <div style={{fontSize:11,color:T.peach,fontWeight:700,tex
 function Lbl(p){return <div style={{fontSize:10,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6}}>{p.children}</div>;}
 function SeSel(p){return <select value={p.val} onChange={p.onChange} style={Object.assign({},inp_s,p.style||{})}><optgroup label="Sessions">{p.ss.map(function(s){return <option key={s.id} value={s.id}>{sLbl(s)}</option>;})}</optgroup><optgroup label="Days">{DAYS.map(function(d){return <option key={d} value={d}>{d}</option>;})}</optgroup></select>;}
 
-var MENU=[{k:"myday",l:"My Day",ic:"☀️"},{k:"checklist",l:"Tasks",ic:"✓"},{k:"add",l:"Add",ic:"+"},{k:"harvest",l:"Harvest",ic:"🌾"},{k:"analytics",l:"Analytics",ic:"📊"},{k:"weather",l:"Weather",ic:"🌤"},{k:"volunteers",l:"Team",ic:"👥"},{k:"briefing",l:"Briefing",ic:"⚠️"},{k:"techniques",l:"Guides",ic:"📖"},{k:"notes",l:"Notes",ic:"📋"},{k:"observations",l:"Observe",ic:"👀"},{k:"settings",l:"Settings",ic:"⚙️"}];
+var MENU=[{k:"myday",l:"My Day",ic:"☀️"},{k:"checklist",l:"Tasks",ic:"✓"},{k:"add",l:"Add",ic:"+"},{k:"harvest",l:"Harvest",ic:"🌾"},{k:"analytics",l:"Analytics",ic:"📊"},{k:"weather",l:"Weather",ic:"🌤"},{k:"volunteers",l:"Team",ic:"👥"},{k:"briefing",l:"Briefing",ic:"⚠️"},{k:"techniques",l:"Guides",ic:"📖"},{k:"notes",l:"Notes",ic:"📋"},{k:"observations",l:"Observe",ic:"👀"},{k:"calendar",l:"Calendar",ic:"📅"},{k:"settings",l:"Settings",ic:"⚙️"}];
 var QUOTES=[{text:"The best time to plant a tree was 20 years ago. The second best time is now.",author:"Chinese Proverb"},{text:"He who plants a garden plants happiness.",author:"Chinese Proverb"},{text:"To forget how to dig the earth and to tend the soil is to forget ourselves.",author:"Mahatma Gandhi"},{text:"Nature does not hurry, yet everything is accomplished.",author:"Lao Tzu"},{text:"The glory of gardening: hands in the dirt, head in the sun, heart with nature.",author:"Alfred Austin"},{text:"In every walk with nature one receives far more than he seeks.",author:"John Muir"},{text:"Patience is bitter, but its fruit is sweet.",author:"Aristotle"},{text:"Small deeds done are better than great deeds planned.",author:"Peter Marshall"},{text:"The farmer has to be an optimist or he wouldn't still be a farmer.",author:"Will Rogers"},{text:"If you have a garden and a library, you have everything you need.",author:"Marcus Tullius Cicero"}];
 
 var APP_PW="littleportion";
@@ -532,7 +532,7 @@ function App(){
 
 function Main(props){
   var onLock=props.onLock;
-  var[ss]=useState(DEF_SESS);
+  var[ss,setSs]=useState([]);
   var[loaded,setLoaded]=useState(false);
   var[tasks,setTasks]=useState([]);
   var[notes,setNotes]=useState([]);
@@ -575,6 +575,7 @@ function Main(props){
   var[debrief,setDebrief]=useState(""); var[debriefLd,setDebriefLd]=useState(false);
   var[milestoneAlerts,setMilestoneAlerts]=useState([]);
   var[certVol,setCertVol]=useState(null);
+  var[calShow,setCalShow]=useState(false); var[calDate,setCalDate]=useState(""); var[calTime,setCalTime]=useState(""); var[calSig,setCalSig]=useState(""); var[calExpanded,setCalExpanded]=useState({});
 
   var dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
   var todayQuote=QUOTES[dayOfYear%QUOTES.length];
@@ -592,6 +593,7 @@ function Main(props){
       setAtt(await ld("lpf_att",{})); setWLog(await ld("lpf_wlog",[])); setHvs(await ld("lpf_hvs",[]));
       setVols(await ld("lpf_vols",[])); setBriefs(await ld("lpf_briefs",[])); setMyJournal(await ld("lpf_journal",[]));
       setMyChecks(await ld("lpf_checks",[])); setMySess(await ld("lpf_mysess",[])); setShownMilestones(await ld("lpf_milestones",[]));
+      setSs(await ld("lpf_sessions",DEF_SESS));
       setLoaded(true);
     }
     loadAll();
@@ -610,6 +612,7 @@ function Main(props){
   useEffect(function(){if(loaded)sv("lpf_checks",myChecks);},[myChecks,loaded]);
   useEffect(function(){if(loaded)sv("lpf_mysess",mySess);},[mySess,loaded]);
   useEffect(function(){if(loaded)sv("lpf_milestones",shownMilestones);},[shownMilestones,loaded]);
+  useEffect(function(){if(loaded)sv("lpf_sessions",ss);},[ss,loaded]);
   useEffect(function(){if((tab==="myday"||tab==="home")&&!myWD&&!myWLd)loadMyW();},[tab]);
   useEffect(function(){if(aWh.length>0)setACn(String(aWh.length));},[aWh]);
 
@@ -1076,7 +1079,7 @@ function Main(props){
               <div>
                 <div style={crd({padding:16})}>
                   <Sec>Log Attendance</Sec>
-                  <SeSel val={aSe} onChange={function(e){setASe(e.target.value);setASg(String(SIG_MAP[e.target.value]||""));}} ss={ss} style={{width:"100%",marginBottom:10}}/>
+                  <SeSel val={aSe} onChange={function(e){setASe(e.target.value);var sessObj=ss.find(function(s){return s.id===e.target.value;});setASg(String((sessObj&&sessObj.signup)||SIG_MAP[e.target.value]||""));}} ss={ss} style={{width:"100%",marginBottom:10}}/>
                   <div style={{display:"flex",gap:10,marginBottom:10}}><div style={{flex:1}}><Lbl>Signed Up</Lbl><input type="number" value={aSg} onChange={function(e){setASg(e.target.value);}} style={Object.assign({},inp_s,{width:"100%",textAlign:"center",fontSize:20})}/></div><div style={{flex:1}}><Lbl>Showed Up</Lbl><input type="number" value={aCn} onChange={function(e){setACn(e.target.value);}} placeholder="0" style={Object.assign({},inp_s,{width:"100%",textAlign:"center",fontSize:20})}/></div></div>
                   {vols.length>0&&<div style={{marginBottom:10}}><Lbl>Who Showed Up</Lbl><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{vols.map(function(v){var sel=aWh.includes(v.id);var ec=EXP_C[v.experience];return <button key={v.id} onClick={function(){setAWh(function(pv){return pv.includes(v.id)?pv.filter(function(x){return x!==v.id;}):pv.concat([v.id]);});}} style={{background:sel?T.teal+"22":ec.bg,color:sel?T.teal:ec.tx,border:"1px solid "+(sel?T.teal:ec.bd),borderRadius:20,padding:"6px 14px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:sel?700:400}}>{v.name}</button>;})}</div></div>}
                   <textarea value={aNm} onChange={function(e){setANm(e.target.value);}} placeholder="Other names (optional)..." rows={2} style={Object.assign({},ta_s,{marginBottom:10})}/>
@@ -1219,6 +1222,86 @@ function Main(props){
             {techs.map(function(tech){return <div key={tech.id} style={crd()}><div style={{padding:"14px 16px",borderBottom:"1px solid "+T.border,display:"flex",alignItems:"center"}}><span style={{flex:1,fontWeight:700,fontSize:15,color:T.peach}}>{tech.title}</span><button onClick={function(){setTechs(function(pv){return pv.filter(function(x){return x.id!==tech.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16}}>X</button></div><div style={{padding:"14px 16px"}}>{(tech.steps||[]).map(function(step,i){return <div key={i} style={{display:"flex",gap:12,marginBottom:12}}><div style={{width:28,height:28,borderRadius:"50%",background:T.peachBg2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:T.peach,flexShrink:0}}>{i+1}</div><p style={{fontSize:14,color:T.textMid,lineHeight:1.6,margin:0,paddingTop:4}}>{step}</p></div>;})} {tech.tips&&<div style={{background:T.butterBg,borderRadius:12,padding:"12px 14px"}}><span style={{fontSize:10,color:T.gold,fontWeight:700,textTransform:"uppercase"}}>Tip</span><p style={{fontSize:13,color:T.textMid,lineHeight:1.6,margin:"4px 0 0",fontStyle:"italic"}}>{tech.tips}</p></div>}</div></div>;})}
           </div>
         )}
+
+        {tab==="calendar"&&(function(){
+          var today=new Date(); today.setHours(0,0,0,0);
+          function sessDate(s){var p=s.date.split("/");return new Date(p[2],p[0]-1,p[1]);}
+          function isPastSess(s){return sessDate(s)<today;}
+          var sortedSs=ss.slice().sort(function(a,b){return sessDate(a)-sessDate(b);});
+          var upcoming=sortedSs.filter(function(s){return !isPastSess(s);});
+          var past=sortedSs.filter(function(s){return isPastSess(s);}).reverse();
+          function addSession(){
+            if(!calDate||!calTime.trim())return;
+            var d=new Date(calDate+"T12:00:00");
+            var dows=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+            var newS={id:mkid(),date:(d.getMonth()+1).toString().padStart(2,"0")+"/"+(d.getDate()).toString().padStart(2,"0")+"/"+d.getFullYear(),dow:dows[d.getDay()],time:calTime.trim(),signup:parseInt(calSig)||0};
+            setSs(function(pv){return pv.concat([newS]);});
+            setCalDate(""); setCalTime(""); setCalSig(""); setCalShow(false);
+          }
+          function delSession(id){setSs(function(pv){return pv.filter(function(s){return s.id!==id;});});}
+          function toggleExp(id){setCalExpanded(function(pv){var n=Object.assign({},pv);n[id]=!n[id];return n;});}
+          return <div>
+            <div style={crd({padding:20})}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                <Sec style={{marginBottom:0}}>Upcoming Sessions</Sec>
+                <button onClick={function(){setCalShow(function(v){return !v;});}} style={Object.assign({},btn(),{padding:"8px 16px",fontSize:12})}>{calShow?"Cancel":"+ Add Session"}</button>
+              </div>
+              {calShow&&<div style={{background:T.bg2,borderRadius:14,padding:16,marginBottom:16}}>
+                <Lbl>Date</Lbl>
+                <input type="date" value={calDate} onChange={function(e){setCalDate(e.target.value);}} style={Object.assign({},inp_s,{width:"100%",marginBottom:10,boxSizing:"border-box"})}/>
+                <Lbl>Time (e.g. 1pm-4pm)</Lbl>
+                <input type="text" placeholder="1pm-4pm" value={calTime} onChange={function(e){setCalTime(e.target.value);}} style={Object.assign({},inp_s,{width:"100%",marginBottom:10,boxSizing:"border-box"})}/>
+                <Lbl>Expected Signups</Lbl>
+                <input type="number" placeholder="0" value={calSig} onChange={function(e){setCalSig(e.target.value);}} style={Object.assign({},inp_s,{width:"100%",marginBottom:14,boxSizing:"border-box"})}/>
+                <button onClick={addSession} disabled={!calDate||!calTime.trim()} style={Object.assign({},btn(),{width:"100%",opacity:(!calDate||!calTime.trim())?0.4:1})}>Save Session</button>
+              </div>}
+              {upcoming.length===0&&<div style={{color:T.textDim,fontSize:14,fontStyle:"italic",textAlign:"center",padding:"12px 0"}}>No upcoming sessions. Add one above.</div>}
+              {upcoming.map(function(s){return <div key={s.id} style={{background:T.bg2,borderRadius:14,padding:"14px 16px",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <div style={{fontWeight:700,color:T.peach,fontSize:15}}>{s.dow}, {s.date}</div>
+                  <div style={{fontSize:13,color:T.textMid,marginTop:2}}>{s.time}{s.signup?<span style={{color:T.textDim}}> &middot; {s.signup} expected</span>:null}</div>
+                </div>
+                <button onClick={function(){delSession(s.id);}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16,padding:"4px 8px"}} title="Delete">&#x2715;</button>
+              </div>;})}
+            </div>
+            <div style={crd({padding:20,marginTop:0})}>
+              <Sec>Session History</Sec>
+              {past.length===0&&<div style={{color:T.textDim,fontSize:14,fontStyle:"italic",textAlign:"center",padding:"12px 0"}}>No past sessions yet.</div>}
+              {past.map(function(s){
+                var records=(att[s.id]||[]);
+                var totalCount=records.reduce(function(a,r){return a+r.count;},0);
+                var names=records.map(function(r){return r.names;}).filter(Boolean).join(", ");
+                var sessHvs=hvs.filter(function(h){return h.session===s.id;});
+                var totalLbs=sessHvs.reduce(function(a,h){return a+(parseFloat(h.amount)||0);},0);
+                var exp=calExpanded[s.id];
+                return <div key={s.id} style={{background:T.bg2,borderRadius:14,marginBottom:10,overflow:"hidden"}}>
+                  <button onClick={function(){toggleExp(s.id);}} style={{width:"100%",background:"none",border:"none",cursor:"pointer",padding:"14px 16px",textAlign:"left",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div>
+                      <div style={{fontWeight:700,color:T.peach,fontSize:15}}>{s.dow}, {s.date}</div>
+                      <div style={{fontSize:13,color:T.textMid,marginTop:2}}>{s.time}</div>
+                    </div>
+                    <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                      {totalCount>0&&<Pill>{totalCount} volunteers</Pill>}
+                      {totalLbs>0&&<Pill bg={T.butterBg} color={T.gold}>{totalLbs.toFixed(1)} lbs</Pill>}
+                      <span style={{color:T.textDim,fontSize:12}}>{exp?"▲":"▼"}</span>
+                    </div>
+                  </button>
+                  {exp&&<div style={{borderTop:"1px solid "+T.border,padding:"12px 16px"}}>
+                    {totalCount===0&&sessHvs.length===0&&<div style={{color:T.textDim,fontSize:13,fontStyle:"italic"}}>No data logged for this session.</div>}
+                    {totalCount>0&&<div style={{marginBottom:10}}>
+                      <div style={{fontSize:11,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Volunteers</div>
+                      <div style={{fontSize:13,color:T.textMid,lineHeight:1.6}}>{names||"Count logged, no names recorded"}</div>
+                    </div>}
+                    {sessHvs.length>0&&<div>
+                      <div style={{fontSize:11,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Harvest</div>
+                      {sessHvs.map(function(h){return <div key={h.id} style={{fontSize:13,color:T.textMid,marginBottom:4}}>{h.crop} — {h.amount} {h.unit} ({h.quality})</div>;})}
+                    </div>}
+                  </div>}
+                </div>;
+              })}
+            </div>
+          </div>;
+        })()}
 
         {tab==="settings"&&(
           <div>
