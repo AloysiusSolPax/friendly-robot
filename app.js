@@ -596,6 +596,8 @@ function Main(props){
   var[certVol,setCertVol]=useState(null);
   var[calShow,setCalShow]=useState(false); var[calDate,setCalDate]=useState(""); var[calTime,setCalTime]=useState(""); var[calSig,setCalSig]=useState(""); var[calExpanded,setCalExpanded]=useState({});
   var[calAiInp,setCalAiInp]=useState(""); var[calAiLd,setCalAiLd]=useState(false); var[calAiResult,setCalAiResult]=useState(null);
+  var[calMonth,setCalMonth]=useState(function(){var d=new Date();return d.getFullYear()*100+(d.getMonth()+1);});
+  var[calSelDay,setCalSelDay]=useState(null);
 
   var dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
   var todayQuote=QUOTES[dayOfYear%QUOTES.length];
@@ -1307,7 +1309,85 @@ function Main(props){
             setCalAiInp("");setCalAiLd(false);
             setTimeout(function(){setCalAiResult(null);},5000);
           }
+          var MNS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+          function daysInMonth(ym){var y=Math.floor(ym/100),m=ym%100;return new Date(y,m,0).getDate();}
+          function firstDow(ym){var y=Math.floor(ym/100),m=ym%100;return new Date(y,m-1,1).getDay();}
+          function cellDate(ym,day){var y=Math.floor(ym/100),m=ym%100;return String(m).padStart(2,"0")+"/"+String(day).padStart(2,"0")+"/"+y;}
+          function prevMonth(ym){var y=Math.floor(ym/100),m=ym%100;m--;if(m<1){m=12;y--;}return y*100+m;}
+          function nextMonth(ym){var y=Math.floor(ym/100),m=ym%100;m++;if(m>12){m=1;y++;}return y*100+m;}
+          var sessByDate={};
+          ss.forEach(function(s){if(!sessByDate[s.date])sessByDate[s.date]=[];sessByDate[s.date].push(s);});
+          var todayMDY=(today.getMonth()+1).toString().padStart(2,"0")+"/"+today.getDate().toString().padStart(2,"0")+"/"+today.getFullYear();
+          var calY=Math.floor(calMonth/100),calM=calMonth%100;
+          var calDays=daysInMonth(calMonth),calOffset=firstDow(calMonth);
+          var calCells=[];
+          for(var ci=0;ci<calOffset;ci++)calCells.push(null);
+          for(var cd=1;cd<=calDays;cd++)calCells.push(cd);
+          while(calCells.length%7!==0)calCells.push(null);
+          var selSessions=calSelDay?(sessByDate[calSelDay]||[]):[];
+          var selIsPast=selSessions.length>0&&sessDate(selSessions[0])<today;
+          var selDt=calSelDay?(function(){var p=calSelDay.split("/");return new Date(p[2],p[0]-1,p[1]);}()):null;
+          var selDow=selDt?["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][selDt.getDay()]:"";
           return <div>
+            <div style={crd({padding:20,marginBottom:0})}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                <button onClick={function(){setCalMonth(prevMonth(calMonth));setCalSelDay(null);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:T.textMid,padding:"2px 10px",lineHeight:1}}>&#8249;</button>
+                <span style={{fontWeight:700,fontSize:16,color:T.text,fontFamily:"Georgia,serif"}}>{MNS[calM-1]} {calY}</span>
+                <button onClick={function(){setCalMonth(nextMonth(calMonth));setCalSelDay(null);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:T.textMid,padding:"2px 10px",lineHeight:1}}>&#8250;</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:4}}>
+                {["Su","Mo","Tu","We","Th","Fr","Sa"].map(function(d){return <div key={d} style={{textAlign:"center",fontSize:10,fontWeight:700,color:T.textDim,padding:"3px 0",textTransform:"uppercase",letterSpacing:"0.06em"}}>{d}</div>;})}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+                {calCells.map(function(day,i){
+                  if(!day)return <div key={"e"+i}/>;
+                  var cd=cellDate(calMonth,day);
+                  var isToday=cd===todayMDY;
+                  var isSel=cd===calSelDay;
+                  var isPast2=new Date(calY,calM-1,day)<today;
+                  var daySess=sessByDate[cd]||[];
+                  return <div key={cd} onClick={function(){setCalSelDay(function(prev){return prev===cd?null:cd;});}} style={{textAlign:"center",padding:"5px 2px",borderRadius:10,cursor:"pointer",border:isSel?"2px solid "+T.peach:"2px solid transparent",background:isToday?T.peachBg:"transparent"}}>
+                    <div style={{fontSize:13,fontWeight:isToday?700:400,color:isPast2?T.textDim:T.text,marginBottom:2}}>{day}</div>
+                    <div style={{display:"flex",justifyContent:"center",gap:3,minHeight:8}}>
+                      {daySess.length>0&&<div style={{width:7,height:7,borderRadius:"50%",background:T.peach}}/>}
+                      {daySess.length>1&&<div style={{width:7,height:7,borderRadius:"50%",background:T.teal}}/>}
+                    </div>
+                  </div>;
+                })}
+              </div>
+            </div>
+            {calSelDay&&<div style={crd({padding:20,marginBottom:0})}>
+              <div style={{fontWeight:700,fontSize:15,color:T.text,marginBottom:12,fontFamily:"Georgia,serif"}}>{selDow}, {calSelDay}</div>
+              {selIsPast?(
+                selSessions.map(function(s){
+                  var recs=att[s.id]||[];
+                  var totalCt=recs.reduce(function(a,r){return a+r.count;},0);
+                  var names=recs.map(function(r){return r.names;}).filter(Boolean).join(", ");
+                  var sHvs=hvs.filter(function(h){return h.session===s.id;});
+                  return <div key={s.id}>
+                    <div style={{fontSize:13,color:T.textMid,marginBottom:10}}>{s.time||"Time not recorded"}</div>
+                    {totalCt===0&&sHvs.length===0&&<div style={{color:T.textDim,fontSize:13,fontStyle:"italic"}}>No data logged for this session.</div>}
+                    {totalCt>0&&<div style={{marginBottom:10}}>
+                      <div style={{fontSize:11,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>Volunteers</div>
+                      <div style={{fontSize:13,color:T.textMid,lineHeight:1.6}}>{names||"Count logged, no names recorded"}{totalCt>0&&<span style={{color:T.textDim}}> ({totalCt} total)</span>}</div>
+                    </div>}
+                    {sHvs.length>0&&<div>
+                      <div style={{fontSize:11,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>Harvest</div>
+                      {sHvs.map(function(h){return <div key={h.id} style={{fontSize:13,color:T.textMid,marginBottom:4}}>{h.crop} — {h.amount} {h.unit} ({h.quality})</div>;})}
+                    </div>}
+                  </div>;
+                })
+              ):(
+                <div>
+                  {selSessions.length===0&&<div style={{color:T.textDim,fontSize:13,fontStyle:"italic",marginBottom:10}}>No sessions scheduled.</div>}
+                  {selSessions.map(function(s){return <div key={s.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:T.bg2,borderRadius:12,padding:"10px 14px",marginBottom:8}}>
+                    <div style={{fontSize:13,color:T.textMid}}>{s.time||"Time TBD"}{s.signup?<span style={{color:T.textDim}}> · {s.signup} expected</span>:null}</div>
+                    <button onClick={function(){delSession(s.id);}} style={{background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:15,padding:"2px 6px"}}>&#x2715;</button>
+                  </div>;})}
+                  <button onClick={function(){var p=calSelDay.split("/");setCalDate(p[2]+"-"+p[0]+"-"+p[1]);setCalShow(true);}} style={Object.assign({},btn(T.bg2,T.peach),{width:"100%",boxShadow:"none",marginTop:4})}>+ Add session on this day</button>
+                </div>
+              )}
+            </div>}
             <div style={crd({padding:20,marginBottom:0})}>
               <Sec>Paste from Sign-Up Genius</Sec>
               <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Paste any text with dates and times — AI will find all the sessions automatically.</div>
