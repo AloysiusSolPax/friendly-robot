@@ -161,7 +161,7 @@ var _n=Date.now();
 function mkid(){return String(++_n);}
 async function sv(k,v){try{await window.storage.set(k,JSON.stringify(v));}catch(e){}}
 async function ld(k,d){try{var r=await window.storage.get(k);if(!r)return d;var v=JSON.parse(r.value);if(typeof v==="string"){try{v=JSON.parse(v);}catch(e){}}return(v!==null&&v!==undefined)?v:d;}catch(e){return d;}}
-async function aiCall(p){for(var a=0;a<2;a++){try{var r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("claudeApiKey")||"","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1000,messages:[{role:"user",content:p}]})});if(!r.ok)throw new Error();var d=await r.json();var t=(d.content||[]).map(function(b){return b.text||"";}).join("");if(!t)throw new Error();return t;}catch(e){if(a<1)await new Promise(function(res){setTimeout(res,800);});else throw e;}}}
+async function aiCall(p){for(var a=0;a<2;a++){try{var ctrl=new AbortController();var tid=setTimeout(function(){ctrl.abort();},12000);var r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal:ctrl.signal,headers:{"Content-Type":"application/json","x-api-key":localStorage.getItem("claudeApiKey")||"","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1000,messages:[{role:"user",content:p}]})});clearTimeout(tid);if(!r.ok)throw new Error();var d=await r.json();var t=(d.content||[]).map(function(b){return b.text||"";}).join("");if(!t)throw new Error();return t;}catch(e){if(a<1)await new Promise(function(res){setTimeout(res,800);});else throw e;}}}
 
 function ft12(t){var p=t.split(":");var h=parseInt(p[0]);return(h===0?12:h>12?h-12:h)+":"+p[1]+(h>=12?"pm":"am");}
 function sLbl(s){var p=s.date.split("/");var d=new Date(p[2]+"-"+p[0]+"-"+p[1]+"T12:00:00");return s.dow.slice(0,3)+" "+d.toLocaleDateString("en-US",{month:"short"})+" "+d.getDate()+" - "+s.time;}
@@ -770,6 +770,7 @@ function Main(props){
     var updates={};
     for(var i=0;i<generals.length;i++){
       var t=generals[i];
+      setResortResult("Sorting "+(i+1)+" of "+generals.length+"...");
       try{
         var raw=await aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+t.text+"\". ONLY JSON:{\"category\":\"c\"}");
         var cleaned=raw.replace(/```json|```/g,"").trim();
