@@ -767,24 +767,24 @@ function Main(props){
     var generals=tasks.filter(function(t){return t.category==="General";});
     if(!generals.length){setResortResult("No General tasks to sort!");setTimeout(function(){setResortResult(null);},3000);return;}
     setResortLd(true);setResortResult(null);
-    try{
-      var list=generals.map(function(t,i){return i+":"+t.text;}).join("|");
-      var raw=await aiCall("Assign each farm task a category. Valid categories: "+CATS.join(",")+". Rules: use Watering for any watering task, Harvesting for harvest or crop removal, Cleanup for tarp/removal/installation/path tasks, Important for urgent tasks, General only if nothing else fits.\nReturn ONLY a JSON array like [{\"i\":0,\"c\":\"Watering\"},{\"i\":1,\"c\":\"Harvesting\"}] — one object per task, no extra text.\nTasks: "+list);
-      var arr=JSON.parse(raw.replace(/```json|```/g,"").trim());
-      if(!Array.isArray(arr))throw new Error();
-      var updated=0;
-      setTasks(function(prev){
-        return prev.map(function(t){
-          if(t.category!=="General")return t;
-          var idx=generals.findIndex(function(g){return g.id===t.id;});
-          var match=arr.find(function(r){return r.i===idx;});
-          if(match&&CATS.indexOf(match.c)>=0){updated++;return Object.assign({},t,{category:match.c});}
-          return t;
-        });
-      });
-      setResortResult("Re-sorted "+arr.length+" task"+(arr.length!==1?"s":"")+"!");
-    }catch(e){setResortResult("Could not re-sort — try again.");}
-    setResortLd(false);setTimeout(function(){setResortResult(null);},5000);
+    var updates={};
+    for(var i=0;i<generals.length;i++){
+      var t=generals[i];
+      try{
+        var raw=await aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+t.text+"\". ONLY JSON:{\"category\":\"c\"}");
+        var cleaned=raw.replace(/```json|```/g,"").trim();
+        var p=JSON.parse(cleaned);
+        if(p.category&&CATS.indexOf(p.category)>=0)updates[t.id]=p.category;
+      }catch(e){}
+    }
+    var count=Object.keys(updates).length;
+    if(count>0){
+      setTasks(function(prev){return prev.map(function(t){return updates[t.id]?Object.assign({},t,{category:updates[t.id]}):t;});});
+      setResortResult("Re-sorted "+count+" task"+(count!==1?"s":"")+"!");
+    }else{
+      setResortResult("Could not re-sort — check your API key in Settings.");
+    }
+    setResortLd(false);setTimeout(function(){setResortResult(null);},6000);
   }
   function togT(id){setTasks(function(t){return t.map(function(x){return x.id===id?Object.assign({},x,{done:!x.done}):x;});});}
   function delT(id){setTasks(function(t){return t.filter(function(x){return x.id!==id;});});}
