@@ -597,6 +597,7 @@ function Main(props){
   var[inp,setInp]=useState(""); var[aiLd,setAiLd]=useState(false); var[aiSt,setAiSt]=useState("");
   var[addRepeat,setAddRepeat]=useState(false);
   var[addBrainInp,setAddBrainInp]=useState(""); var[addBrainLd,setAddBrainLd]=useState(false); var[addBrainResult,setAddBrainResult]=useState(null);
+  var[resortLd,setResortLd]=useState(false); var[resortResult,setResortResult]=useState(null);
   var[nInp,setNInp]=useState(""); var[nLd,setNLd]=useState(false);
   var[oInp,setOInp]=useState(""); var[oLd,setOLd]=useState(false);
   var[nPhoto,setNPhoto]=useState(null); var[oPhoto,setOPhoto]=useState(null); var[hPhoto,setHPhoto]=useState(null); var[brPhoto,setBrPhoto]=useState(null); var[tPhoto,setTPhoto]=useState(null);
@@ -761,6 +762,29 @@ function Main(props){
       setAddBrainResult(added>0?"Sorted "+added+" task"+(added>1?"s":"")+"!":"No tasks found — try being more specific.");
     }catch(e){setAddBrainResult("Could not sort — try again.");}
     setAddBrainInp("");setAddBrainLd(false);setTimeout(function(){setAddBrainResult(null);},5000);
+  }
+  async function resortGeneralTasks(){
+    var generals=tasks.filter(function(t){return t.category==="General";});
+    if(!generals.length){setResortResult("No General tasks to sort!");setTimeout(function(){setResortResult(null);},3000);return;}
+    setResortLd(true);setResortResult(null);
+    try{
+      var list=generals.map(function(t,i){return i+". "+t.text;}).join("\n");
+      var raw=await aiCall("Re-categorize these farm tasks. Categories: "+CATS.join(",")+". ONLY JSON:\n{\"results\":[{\"index\":0,\"category\":\"c\"}]}\nUse Watering for any watering task. Use Harvesting for any harvesting or crop removal task. Use Cleanup for cleanup/removal/installation tasks. Use Important for urgent/priority tasks. Use General ONLY if truly no better fit. Return one entry per task.\nTasks:\n"+list);
+      var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
+      var results=(JSON.parse(mt[0]).results||[]);
+      var updated=0;
+      setTasks(function(prev){
+        return prev.map(function(t){
+          if(t.category!=="General")return t;
+          var idx=generals.findIndex(function(g){return g.id===t.id;});
+          var match=results.find(function(r){return r.index===idx;});
+          if(match&&match.category&&match.category!==t.category){updated++;return Object.assign({},t,{category:match.category});}
+          return t;
+        });
+      });
+      setResortResult("Re-sorted "+results.length+" tasks!");
+    }catch(e){setResortResult("Could not re-sort — try again.");}
+    setResortLd(false);setTimeout(function(){setResortResult(null);},5000);
   }
   function togT(id){setTasks(function(t){return t.map(function(x){return x.id===id?Object.assign({},x,{done:!x.done}):x;});});}
   function delT(id){setTasks(function(t){return t.filter(function(x){return x.id!==id;});});}
@@ -1098,6 +1122,12 @@ function Main(props){
             <textarea value={addBrainInp} onChange={function(e){setAddBrainInp(e.target.value);}} placeholder={"e.g. close bins at end of every session, remember to check the gate latch, harvest row 3 kale if ready, water hoop house daily..."} rows={4} style={Object.assign({},ta_s,{marginBottom:10})}/>
             <button onClick={processAddBrain} disabled={addBrainLd||!addBrainInp.trim()} style={Object.assign({},btn(),{width:"100%",opacity:(addBrainLd||!addBrainInp.trim())?0.4:1})}>{addBrainLd?"Sorting...":"Sort & Add Tasks"}</button>
             {addBrainResult&&<div style={{marginTop:10,padding:"10px 14px",background:addBrainResult.startsWith("Sorted")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:addBrainResult.startsWith("Sorted")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{addBrainResult}</div>}
+          </div>
+          <div style={crd({padding:16})}>
+            <Sec>Fix Existing Tasks</Sec>
+            <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Re-sort all tasks currently stuck in General into the correct categories.</div>
+            <button onClick={resortGeneralTasks} disabled={resortLd} style={Object.assign({},btn(T.peach,"#fff"),{width:"100%",opacity:resortLd?0.4:1})}>{resortLd?"Re-sorting...":"Re-sort General Tasks"}</button>
+            {resortResult&&<div style={{marginTop:10,padding:"10px 14px",background:resortResult.startsWith("Re-sorted")||resortResult.startsWith("No")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:resortResult.startsWith("Re-sorted")||resortResult.startsWith("No")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{resortResult}</div>}
           </div>
         </div>}
 
