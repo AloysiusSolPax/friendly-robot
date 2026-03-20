@@ -1482,23 +1482,49 @@ function Main(props){
           }
           function delSession(id){setSs(function(pv){return pv.filter(function(s){return s.id!==id;});});}
           function toggleExp(id){setCalExpanded(function(pv){var n=Object.assign({},pv);n[id]=!n[id];return n;});}
-          async function parseCalSessions(){
+          function parseCalSessions(){
             if(!calAiInp.trim())return;
-            setCalAiLd(true);setCalAiResult(null);
-            try{
-              var raw=await aiCall("Extract ALL farm session dates from this Sign-Up Genius text. Today:"+todayStr+". Return ONLY JSON:\n{\"sessions\":[{\"date\":\"MM/DD/YYYY\",\"dow\":\"full day name\",\"time\":\"time range e.g. 1pm-4pm\",\"signup\":number_or_0}]}\nConvert all natural language dates to MM/DD/YYYY. If no year given use current year. Extract every date/time mentioned.\nInput:\""+calAiInp.replace(/"/g,"'")+"\"");
-              var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
-              var parsed=(JSON.parse(mt[0]).sessions||[]);
-              var added=0;
-              parsed.forEach(function(item){
-                if(!item.date)return;
-                var dowFb=(function(){var p=item.date.split("/");var d=new Date(p[2],p[0]-1,p[1]);return["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];}());
-                setSs(function(pv){return pv.concat([{id:mkid(),date:item.date,dow:item.dow||dowFb,time:item.time||"",signup:parseInt(item.signup)||0}]);});
-                added++;
+            var DOWS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+            var lines=calAiInp.split(/\r?\n/).map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+            var sessions=[];
+            var curDate=null,curDow=null;
+            var dateRe=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+            var timeRe=/^(\d{1,2}:\d{2}(?:am|pm))\s*[-–]\s*(\d{1,2}:\d{2}(?:am|pm))$/i;
+            var slotRe=/^(\d+)\s+of\s+\d+\s+slots?\s+filled/i;
+            var pendingTimes=[];
+            function flushTimes(signup){
+              pendingTimes.forEach(function(t){
+                if(curDate){
+                  var p=curDate.split("/");var d=new Date(p[2],p[0]-1,p[1]);
+                  var dow=DOWS[d.getDay()];
+                  sessions.push({id:mkid(),date:curDate,dow:curDow||dow,time:t,signup:signup||0});
+                }
               });
-              setCalAiResult(added>0?"Added "+added+" session"+(added>1?"s":"")+"!":"No sessions found — try pasting the full Sign-Up Genius text.");
-            }catch(e){setCalAiResult("Could not parse — try again or add manually.");}
-            setCalAiInp("");setCalAiLd(false);
+              pendingTimes=[];
+            }
+            var i=0;
+            while(i<lines.length){
+              var ln=lines[i];
+              if(dateRe.test(ln)){
+                pendingTimes=[];
+                curDate=ln;
+                curDow=lines[i+1]&&/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i.test(lines[i+1])?lines[i+1]:null;
+                if(curDow)i++;
+              } else if(timeRe.test(ln)){
+                var tm=ln.replace(/\s*[-–]\s*/,"-").replace(/\s/g,"").toLowerCase();
+                pendingTimes.push(tm);
+              } else if(slotRe.test(ln)){
+                var m=ln.match(slotRe);
+                var cnt=parseInt(m[1])||0;
+                flushTimes(cnt);
+              }
+              i++;
+            }
+            if(pendingTimes.length>0)flushTimes(0);
+            if(sessions.length===0){setCalAiResult("No sessions found — make sure you paste the full Sign-Up Genius text.");return;}
+            setSs(function(pv){return pv.concat(sessions);});
+            setCalAiResult("Added "+sessions.length+" session"+(sessions.length>1?"s":"")+"!");
+            setCalAiInp("");
             setTimeout(function(){setCalAiResult(null);},5000);
           }
           var MNS=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -1582,9 +1608,9 @@ function Main(props){
             </div>}
             <div style={crd({padding:20,marginBottom:0})}>
               <Sec>Paste from Sign-Up Genius</Sec>
-              <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Paste any text with dates and times — AI will find all the sessions automatically.</div>
-              <textarea value={calAiInp} onChange={function(e){setCalAiInp(e.target.value);}} placeholder="e.g. Thursday April 10 · 1pm-4pm (12 spots), Saturday April 12 · 8:30am-2pm (20 spots)..." rows={4} style={Object.assign({},ta_s,{marginBottom:10})}/>
-              <button onClick={parseCalSessions} disabled={calAiLd||!calAiInp.trim()} style={Object.assign({},btn(),{width:"100%",opacity:(calAiLd||!calAiInp.trim())?0.4:1})}>{calAiLd?"Finding sessions...":"Add Sessions with AI"}</button>
+              <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Paste the Sign-Up Genius page text directly — dates, times, and slot counts are read automatically.</div>
+              <textarea value={calAiInp} onChange={function(e){setCalAiInp(e.target.value);}} placeholder="Paste Sign-Up Genius text here..." rows={4} style={Object.assign({},ta_s,{marginBottom:10})}/>
+              <button onClick={parseCalSessions} disabled={!calAiInp.trim()} style={Object.assign({},btn(),{width:"100%",opacity:!calAiInp.trim()?0.4:1})}>Import Sessions</button>
               {calAiResult&&<div style={{marginTop:10,padding:"10px 14px",background:calAiResult.startsWith("Added")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:calAiResult.startsWith("Added")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{calAiResult}</div>}
             </div>
             <div style={crd({padding:20})}>
