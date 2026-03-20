@@ -768,21 +768,21 @@ function Main(props){
     if(!generals.length){setResortResult("No General tasks to sort!");setTimeout(function(){setResortResult(null);},3000);return;}
     setResortLd(true);setResortResult(null);
     try{
-      var list=generals.map(function(t,i){return i+". "+t.text;}).join("\n");
-      var raw=await aiCall("Re-categorize these farm tasks. Categories: "+CATS.join(",")+". ONLY JSON:\n{\"results\":[{\"index\":0,\"category\":\"c\"}]}\nUse Watering for any watering task. Use Harvesting for any harvesting or crop removal task. Use Cleanup for cleanup/removal/installation tasks. Use Important for urgent/priority tasks. Use General ONLY if truly no better fit. Return one entry per task.\nTasks:\n"+list);
-      var mt=raw.match(/\{[\s\S]*\}/);if(!mt)throw new Error();
-      var results=(JSON.parse(mt[0]).results||[]);
+      var list=generals.map(function(t,i){return i+":"+t.text;}).join("|");
+      var raw=await aiCall("Assign each farm task a category. Valid categories: "+CATS.join(",")+". Rules: use Watering for any watering task, Harvesting for harvest or crop removal, Cleanup for tarp/removal/installation/path tasks, Important for urgent tasks, General only if nothing else fits.\nReturn ONLY a JSON array like [{\"i\":0,\"c\":\"Watering\"},{\"i\":1,\"c\":\"Harvesting\"}] — one object per task, no extra text.\nTasks: "+list);
+      var arr=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      if(!Array.isArray(arr))throw new Error();
       var updated=0;
       setTasks(function(prev){
         return prev.map(function(t){
           if(t.category!=="General")return t;
           var idx=generals.findIndex(function(g){return g.id===t.id;});
-          var match=results.find(function(r){return r.index===idx;});
-          if(match&&match.category&&match.category!==t.category){updated++;return Object.assign({},t,{category:match.category});}
+          var match=arr.find(function(r){return r.i===idx;});
+          if(match&&CATS.indexOf(match.c)>=0){updated++;return Object.assign({},t,{category:match.c});}
           return t;
         });
       });
-      setResortResult("Re-sorted "+results.length+" tasks!");
+      setResortResult("Re-sorted "+arr.length+" task"+(arr.length!==1?"s":"")+"!");
     }catch(e){setResortResult("Could not re-sort — try again.");}
     setResortLd(false);setTimeout(function(){setResortResult(null);},5000);
   }
@@ -1123,13 +1123,16 @@ function Main(props){
             <button onClick={processAddBrain} disabled={addBrainLd||!addBrainInp.trim()} style={Object.assign({},btn(),{width:"100%",opacity:(addBrainLd||!addBrainInp.trim())?0.4:1})}>{addBrainLd?"Sorting...":"Sort & Add Tasks"}</button>
             {addBrainResult&&<div style={{marginTop:10,padding:"10px 14px",background:addBrainResult.startsWith("Sorted")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:addBrainResult.startsWith("Sorted")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{addBrainResult}</div>}
           </div>
-          <div style={crd({padding:16})}>
+        </div>}
+
+        {tab==="checklist"&&tasks.filter(function(t){return t.category==="General";}).length>0&&(
+          <div style={crd({padding:16,marginTop:8})}>
             <Sec>Fix Existing Tasks</Sec>
-            <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Re-sort all tasks currently stuck in General into the correct categories.</div>
+            <div style={{fontSize:12,color:T.textDim,marginBottom:10,lineHeight:1.6}}>Re-sort all tasks in General into the correct categories.</div>
             <button onClick={resortGeneralTasks} disabled={resortLd} style={Object.assign({},btn(T.peach,"#fff"),{width:"100%",opacity:resortLd?0.4:1})}>{resortLd?"Re-sorting...":"Re-sort General Tasks"}</button>
             {resortResult&&<div style={{marginTop:10,padding:"10px 14px",background:resortResult.startsWith("Re-sorted")||resortResult.startsWith("No")?T.greenBg:T.roseBg,borderRadius:12,fontSize:13,color:resortResult.startsWith("Re-sorted")||resortResult.startsWith("No")?T.green:T.rose,fontWeight:600,textAlign:"center"}}>{resortResult}</div>}
           </div>
-        </div>}
+        )}
 
         {tab==="harvest"&&(
           <div>
