@@ -1485,38 +1485,61 @@ function Main(props){
           function parseCalSessions(){
             if(!calAiInp.trim())return;
             var DOWS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-            var lines=calAiInp.split(/\r?\n/).map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+            // Normalize: collapse multiple spaces, unify dash variants, remove zero-width chars
+            var text=calAiInp.replace(/[\u200B-\u200D\uFEFF]/g,"").replace(/[—–]/g,"-").replace(/\u00a0/g," ");
+            var lines=text.split(/\r?\n/).map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
             var sessions=[];
             var curDate=null,curDow=null;
+            // date: 04/01/2026 or 4/1/2026
             var dateRe=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-            var timeRe=/^(\d{1,2}:\d{2}(?:am|pm))\s*[-–]\s*(\d{1,2}:\d{2}(?:am|pm))$/i;
-            var slotRe=/^(\d+)\s+of\s+\d+\s+slots?\s+filled/i;
+            // time token: 1:00pm, 8:30am, 11:30am — with or without space before am/pm
+            var timeTok=/(\d{1,2}:\d{2})\s*(am|pm)/i;
+            // full range on one line: 1:00pm- 4:00pm or 1:00pm-4:00pm or 1:00 pm - 4:00 pm
+            var rangeRe=/(\d{1,2}:\d{2})\s*(am|pm)[^0-9]*(\d{1,2}:\d{2})\s*(am|pm)/i;
+            var slotRe=/(\d+)\s*of\s*\d+\s*slots?\s*filled/i;
+            var dowRe=/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i;
+            var skipRe=/^(sign\s*up|volunteer\s*on\s*farm|filled|slots?)$/i;
             var pendingTimes=[];
+            var lastTimeTok=null;
+            function makeRange(h1,ap1,h2,ap2){return h1+(ap1.toLowerCase())+"-"+h2+(ap2.toLowerCase());}
             function flushTimes(signup){
               pendingTimes.forEach(function(t){
                 if(curDate){
                   var p=curDate.split("/");var d=new Date(p[2],p[0]-1,p[1]);
-                  var dow=DOWS[d.getDay()];
-                  sessions.push({id:mkid(),date:curDate,dow:curDow||dow,time:t,signup:signup||0});
+                  sessions.push({id:mkid(),date:curDate,dow:curDow||DOWS[d.getDay()],time:t,signup:signup||0});
                 }
               });
-              pendingTimes=[];
+              pendingTimes=[];lastTimeTok=null;
             }
             var i=0;
             while(i<lines.length){
               var ln=lines[i];
               if(dateRe.test(ln)){
-                pendingTimes=[];
-                curDate=ln;
-                curDow=lines[i+1]&&/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i.test(lines[i+1])?lines[i+1]:null;
-                if(curDow)i++;
-              } else if(timeRe.test(ln)){
-                var tm=ln.replace(/\s*[-–]\s*/,"-").replace(/\s/g,"").toLowerCase();
-                pendingTimes.push(tm);
+                if(pendingTimes.length>0)flushTimes(0);
+                curDate=ln; curDow=null; lastTimeTok=null;
+                if(lines[i+1]&&dowRe.test(lines[i+1])){curDow=lines[i+1];i++;}
+              } else if(dowRe.test(ln)){
+                curDow=ln;
               } else if(slotRe.test(ln)){
-                var m=ln.match(slotRe);
-                var cnt=parseInt(m[1])||0;
-                flushTimes(cnt);
+                var sm=ln.match(slotRe);
+                flushTimes(parseInt(sm[1])||0);
+              } else if(!skipRe.test(ln)){
+                // try full range on this line
+                var rm=ln.match(rangeRe);
+                if(rm){
+                  pendingTimes.push(makeRange(rm[1],rm[2],rm[3],rm[4]));
+                  lastTimeTok=null;
+                } else if(timeTok.test(ln)){
+                  // single time token — may be start or end of a split range
+                  var tm=ln.match(timeTok);
+                  if(lastTimeTok){
+                    // pair with previous token to form range
+                    pendingTimes.push(makeRange(lastTimeTok[1],lastTimeTok[2],tm[1],tm[2]));
+                    lastTimeTok=null;
+                  } else {
+                    lastTimeTok=tm;
+                  }
+                }
               }
               i++;
             }
