@@ -770,16 +770,12 @@ function Main(props){
     if(!generals.length){setResortResult("No General tasks to sort!");setTimeout(function(){setResortResult(null);},3000);return;}
     setResortLd(true);setResortResult(null);
     var updates={};
-    for(var i=0;i<generals.length;i++){
-      var t=generals[i];
-      setResortResult("Sorting "+(i+1)+" of "+generals.length+"...");
-      try{
-        var raw=await aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+t.text+"\". ONLY JSON:{\"category\":\"c\"}");
-        var cleaned=raw.replace(/```json|```/g,"").trim();
-        var p=JSON.parse(cleaned);
-        if(p.category&&CATS.indexOf(p.category)>=0)updates[t.id]=p.category;
-      }catch(e){}
-    }
+    setResortResult("Sorting "+generals.length+" tasks...");
+    var results=await Promise.all(generals.map(function(t){
+      return aiCall("Categorize farm task. Categories:"+CATS.join(",")+". Task:\""+t.text+"\". ONLY JSON:{\"category\":\"c\"}")
+        .then(function(raw){var p=JSON.parse(raw.replace(/```json|```/g,"").trim());if(p.category&&CATS.indexOf(p.category)>=0)updates[t.id]=p.category;})
+        .catch(function(){});
+    }));
     var count=Object.keys(updates).length;
     if(count>0){
       setTasks(function(prev){return prev.map(function(t){return updates[t.id]?Object.assign({},t,{category:updates[t.id]}):t;});});
