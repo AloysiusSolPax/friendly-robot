@@ -628,6 +628,7 @@ function Main(props){
 
   var dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
   var todayQuote=QUOTES[dayOfYear%QUOTES.length];
+  var upcomingSs=(function(){var now=new Date();now.setHours(0,0,0,0);return ss.filter(function(s){var p=s.date.split("/");return new Date(p[2],p[0]-1,p[1])>=now;});})();
 
   useEffect(function(){
     async function loadAll(){
@@ -956,7 +957,7 @@ function Main(props){
             <div style={crd({padding:18})}>
               <Sec>Print Day Sheet</Sec>
               <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-                <div style={{flex:1}}><Lbl>Session</Lbl><SeSel val={printSess} onChange={function(e){setPrintSess(e.target.value);}} ss={ss} style={{width:"100%"}}/></div>
+                <div style={{flex:1}}><Lbl>Session</Lbl><SeSel val={printSess} onChange={function(e){setPrintSess(e.target.value);}} ss={upcomingSs} style={{width:"100%"}}/></div>
                 <button onClick={function(){
                   var dt=dT(printSess);var si=ss.find(function(s){return s.id===printSess;});var sl2=si?sLbl(si):printSess;
                   var grp=CATS.reduce(function(a,cat){var its=dt.filter(function(t){return t.category===cat;});if(its.length)a[cat]=its;return a;},{});
@@ -1042,7 +1043,7 @@ function Main(props){
 
         {tab==="checklist"&&(
           <div>
-            <div style={{display:"flex",gap:8,marginBottom:14}}><SeSel val={viewDay} onChange={function(e){setViewDay(e.target.value);}} ss={ss} style={{flex:1}}/><button onClick={function(){setTasks(function(t){return t.filter(function(x){return!(x.day===viewDay&&!x.recurring);}).map(function(x){return x.day===viewDay&&x.recurring?Object.assign({},x,{done:false}):x;});});}} style={btn2()}>Reset</button></div>
+            <div style={{display:"flex",gap:8,marginBottom:14}}><SeSel val={viewDay} onChange={function(e){setViewDay(e.target.value);}} ss={upcomingSs} style={{flex:1}}/><button onClick={function(){setTasks(function(t){return t.filter(function(x){return!(x.day===viewDay&&!x.recurring);}).map(function(x){return x.day===viewDay&&x.recurring?Object.assign({},x,{done:false}):x;});});}} style={btn2()}>Reset</button></div>
             {urgentBriefs.length>0&&<div style={crd({padding:14,background:T.bg3})}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:14}}>⚠️</span><span style={{fontSize:11,color:T.rose,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Brief Your Team</span></div>{urgentBriefs.slice(0,3).map(function(b){return <div key={b.id} style={{fontSize:12,color:T.textMid,lineHeight:1.5,padding:"6px 0",borderBottom:"1px solid "+T.border}}><Pill bg={b.severity==="critical"?T.roseBg:T.peachBg} color={b.severity==="critical"?T.rose:T.peach}>{b.severity}</Pill><span style={{marginLeft:6}}>{b.text}</span></div>;})}</div>}
             {myWD&&myWD.weatherCode>=61&&myWD.weatherCode<=69&&<div style={crd({padding:14,background:"#e8f4f0"})}><div style={{fontSize:12,color:T.teal}}><strong>Rain detected</strong> — consider skipping outdoor watering</div></div>}
             {myWD&&myWD.tempF<=32&&<div style={crd({padding:14,background:"#e8e8f4"})}><div style={{fontSize:12,color:T.lavender}}><strong>Freezing temps</strong> — check frost covers</div></div>}
@@ -1074,7 +1075,7 @@ function Main(props){
         )}
 
         {tab==="add"&&<div>
-          <div style={crd({padding:16})}><Lbl>Adding to</Lbl><SeSel val={addDay} onChange={function(e){setAddDay(e.target.value);}} ss={ss} style={{width:"100%"}}/></div>
+          <div style={crd({padding:16})}><Lbl>Adding to</Lbl><SeSel val={addDay} onChange={function(e){setAddDay(e.target.value);}} ss={upcomingSs} style={{width:"100%"}}/></div>
           <div style={crd({padding:16})}>
             <Sec>Quick Add Task</Sec>
             <div style={{display:"flex",gap:8,marginBottom:8}}>
@@ -1097,7 +1098,7 @@ function Main(props){
           <div>
             <div style={crd({padding:16})}>
               <Sec>Log Harvest</Sec>
-              <Lbl>Session</Lbl><SeSel val={hSe} onChange={function(e){setHSe(e.target.value);}} ss={ss} style={{width:"100%",marginBottom:10}}/>
+              <Lbl>Session</Lbl><SeSel val={hSe} onChange={function(e){setHSe(e.target.value);}} ss={upcomingSs} style={{width:"100%",marginBottom:10}}/>
               <div style={{display:"flex",gap:8,marginBottom:10}}><div style={{flex:1}}><Lbl>Crop</Lbl><select value={hCr} onChange={function(e){setHCr(e.target.value);}} style={Object.assign({},inp_s,{width:"100%"})}>{HV_CROPS.map(function(c){return <option key={c}>{c}</option>;})}</select></div><div style={{flex:1}}><Lbl>Quality</Lbl><select value={hQu} onChange={function(e){setHQu(e.target.value);}} style={Object.assign({},inp_s,{width:"100%"})}>{HV_QUAL.map(function(q){return <option key={q}>{q}</option>;})}</select></div></div>
               <div style={{display:"flex",gap:8,marginBottom:10}}><div style={{flex:1}}><Lbl>Amount</Lbl><input type="number" value={hAm} onChange={function(e){setHAm(e.target.value);}} placeholder="0" style={Object.assign({},inp_s,{width:"100%",textAlign:"center",fontSize:18})}/></div><div style={{flex:1}}><Lbl>Unit</Lbl><select value={hUn} onChange={function(e){setHUn(e.target.value);}} style={Object.assign({},inp_s,{width:"100%"})}>{HV_UNITS.map(function(u){return <option key={u}>{u}</option>;})}</select></div></div>
               <button onClick={saveHv} disabled={!hAm} style={Object.assign({},btn(),{width:"100%",opacity:!hAm?0.4:1})}>Log Harvest</button>
@@ -1259,7 +1260,7 @@ function Main(props){
                 </div>
               </div>;
             })()}
-            <div style={crd({padding:16})}><Sec>Weather Note</Sec><SeSel val={wDy} onChange={function(e){setWDy(e.target.value);}} ss={ss} style={{width:"100%",marginBottom:8}}/><textarea value={wN} onChange={function(e){setWN(e.target.value);}} placeholder="e.g. Hot day, moved harvesting earlier" rows={2} style={ta_s}/><button onClick={function(){if(wN.trim()){setWLog(function(pv){return pv.concat([{id:mkid(),day:wDy,note:wN.trim(),date:todayStr}]);});setWN("");}}} disabled={!wN.trim()} style={Object.assign({},btn(T.teal,"#fff"),{marginTop:8,opacity:!wN.trim()?0.4:1})}>Save Note</button></div>
+            <div style={crd({padding:16})}><Sec>Weather Note</Sec><SeSel val={wDy} onChange={function(e){setWDy(e.target.value);}} ss={upcomingSs} style={{width:"100%",marginBottom:8}}/><textarea value={wN} onChange={function(e){setWN(e.target.value);}} placeholder="e.g. Hot day, moved harvesting earlier" rows={2} style={ta_s}/><button onClick={function(){if(wN.trim()){setWLog(function(pv){return pv.concat([{id:mkid(),day:wDy,note:wN.trim(),date:todayStr}]);});setWN("");}}} disabled={!wN.trim()} style={Object.assign({},btn(T.teal,"#fff"),{marginTop:8,opacity:!wN.trim()?0.4:1})}>Save Note</button></div>
             {wLog.slice().reverse().map(function(e){return <div key={e.id} style={crd({padding:"12px 16px"})}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><Pill bg={T.tealBg} color={T.teal}>{(e.day||"").slice(0,3)}</Pill><span style={{fontSize:11,color:T.textDim}}>{e.date}</span><button onClick={function(){setWLog(function(wl){return wl.filter(function(x){return x.id!==e.id;});});}} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:T.textDim,fontSize:16}}>X</button></div><p style={{margin:0,fontSize:13,color:T.textMid,fontStyle:"italic"}}>{e.note}</p></div>;})}
           </div>
         )}
