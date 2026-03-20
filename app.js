@@ -625,6 +625,9 @@ function Main(props){
   var[calSelDay,setCalSelDay]=useState(null);
   var[sessBrief,setSessBrief]=useState(null); var[sessBriefLd,setSessBriefLd]=useState(false); var[sessBriefId,setSessBriefId]=useState(null);
   var[volDetail,setVolDetail]=useState(null);
+  var[commLogs,setCommLogs]=useState([]);
+  var[commVol,setCommVol]=useState(""); var[commNote,setCommNote]=useState(""); var[commType,setCommType]=useState("Conversation"); var[commFU,setCommFU]=useState(false);
+  var[rptSess,setRptSess]=useState("s6");
 
   var dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
   var todayQuote=QUOTES[dayOfYear%QUOTES.length];
@@ -643,6 +646,7 @@ function Main(props){
       setAtt(await ld("lpf_att",{})); setWLog(await ld("lpf_wlog",[])); setHvs(await ld("lpf_hvs",[]));
       setVols(await ld("lpf_vols",[])); setBriefs(await ld("lpf_briefs",[])); setMyJournal(await ld("lpf_journal",[]));
       setMyChecks(await ld("lpf_checks",[])); setMySess(await ld("lpf_mysess",[])); setShownMilestones(await ld("lpf_milestones",[]));
+      setCommLogs(await ld("lpf_commlog",[]));
       setSs(await ld("lpf_sessions",DEF_SESS));
       setLoaded(true);
     }
@@ -663,6 +667,7 @@ function Main(props){
   useEffect(function(){if(loaded)sv("lpf_mysess",mySess);},[mySess,loaded]);
   useEffect(function(){if(loaded)sv("lpf_milestones",shownMilestones);},[shownMilestones,loaded]);
   useEffect(function(){if(loaded)sv("lpf_sessions",ss);},[ss,loaded]);
+  useEffect(function(){if(loaded)sv("lpf_commlog",commLogs);},[commLogs,loaded]);
   useEffect(function(){if((tab==="myday"||tab==="home"||tab==="weather")&&!myWD&&!myWLd)loadMyW();},[tab]);
   useEffect(function(){if(aWh.length>0)setACn(String(aWh.length));},[aWh]);
 
@@ -1268,9 +1273,9 @@ function Main(props){
         {tab==="volunteers"&&(
           <div>
             <div style={{display:"flex",gap:6,marginBottom:18,flexWrap:"wrap"}}>
-              {[["attendance","Attendance"],["roster","Roster"],["hours","Hours"],["recognition","Recognition"]].map(function(arr){
+              {[["attendance","Attend"],["roster","Roster"],["hours","Hours"],["recognition","Awards"],["comms","Comms"],["reports","Report"]].map(function(arr){
                 var k=arr[0],l=arr[1],act=vT===k;
-                return <button key={k} onClick={function(){setVT(k);}} style={{flex:1,background:act?T.white:"transparent",color:act?T.peach:T.textDim,border:act?"none":"1.5px solid "+T.border,borderRadius:16,padding:"10px 6px",fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:act?700:400,boxShadow:act?T.shadow:"none"}}>{l}</button>;
+                return <button key={k} onClick={function(){setVT(k);}} style={{flex:"1 1 calc(33% - 4px)",background:act?T.white:"transparent",color:act?T.peach:T.textDim,border:act?"none":"1.5px solid "+T.border,borderRadius:16,padding:"10px 4px",fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:act?700:400,boxShadow:act?T.shadow:"none"}}>{l}</button>;
               })}
             </div>
             {vT==="attendance"&&(
@@ -1376,6 +1381,103 @@ function Main(props){
                       </div>;})}</div>
                   </div>;
                 })()}
+              </div>
+            )}
+            {vT==="comms"&&(
+              <div>
+                <div style={crd({padding:16})}>
+                  <Sec>Log Conversation</Sec>
+                  <select value={commVol} onChange={function(e){setCommVol(e.target.value);}} style={Object.assign({},inp_s,{width:"100%",marginBottom:8})}>
+                    <option value="">— Select Volunteer —</option>
+                    {vols.map(function(v){return <option key={v.id} value={v.id}>{v.name}</option>;})}
+                  </select>
+                  <select value={commType} onChange={function(e){setCommType(e.target.value);}} style={Object.assign({},inp_s,{width:"100%",marginBottom:8})}>
+                    {["Conversation","Absence Noted","Follow-up Needed","Recognition"].map(function(t){return <option key={t}>{t}</option>;})}
+                  </select>
+                  <textarea value={commNote} onChange={function(e){setCommNote(e.target.value);}} placeholder="Notes from the conversation..." rows={3} style={Object.assign({},ta_s,{marginBottom:8})}/>
+                  <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,fontSize:13,color:T.textMid,cursor:"pointer"}}>
+                    <input type="checkbox" checked={commFU} onChange={function(e){setCommFU(e.target.checked);}} style={{accentColor:T.peach}}/> Flag for follow-up
+                  </label>
+                  <button onClick={function(){if(!commVol||!commNote.trim())return;setCommLogs(function(pv){return [{id:mkid(),volId:commVol,note:commNote.trim(),type:commType,followUp:commFU,date:todayStr}].concat(pv);});setCommNote("");setCommFU(false);}} disabled={!commVol||!commNote.trim()} style={Object.assign({},btn(),{opacity:(!commVol||!commNote.trim())?0.4:1})}>Save Log</button>
+                </div>
+                {(function(){var fu=commLogs.filter(function(l){return l.followUp;});return fu.length>0&&<div style={crd({padding:16,border:"1.5px solid "+T.rose+"55"})}>
+                  <div style={{fontSize:10,color:T.rose,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>⚑ Follow-ups Needed ({fu.length})</div>
+                  {fu.map(function(l){var v=gVol(l.volId);return <div key={l.id} style={{paddingBottom:10,marginBottom:10,borderBottom:"1px solid "+T.border}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}><span style={{fontWeight:600,fontSize:13,color:T.text}}>{v?v.name:"Unknown"}</span><span style={{fontSize:11,color:T.textDim}}>{l.date}</span></div>
+                    <div style={{fontSize:13,color:T.textMid,lineHeight:1.6,marginBottom:6}}>{l.note}</div>
+                    <button onClick={function(){setCommLogs(function(pv){return pv.map(function(x){return x.id===l.id?Object.assign({},x,{followUp:false}):x;});});}} style={{fontSize:10,padding:"3px 10px",background:T.rose+"15",color:T.rose,border:"1px solid "+T.rose+"44",borderRadius:12,cursor:"pointer",fontFamily:"Georgia,serif"}}>Mark resolved</button>
+                  </div>;})}
+                </div>;}())}
+                {commLogs.length===0&&<div style={{textAlign:"center",color:T.textDim,fontStyle:"italic",padding:20}}>No logs yet. Use this to track conversations, absences, and follow-ups.</div>}
+                {commLogs.filter(function(l){return !l.followUp;}).map(function(l){
+                  var v=gVol(l.volId);
+                  var typeC={"Conversation":T.teal,"Absence Noted":T.rose,"Follow-up Needed":T.peach,"Recognition":T.gold};
+                  var tc=typeC[l.type]||T.textDim;
+                  return <div key={l.id} style={crd({padding:14})}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontWeight:600,fontSize:13,color:T.text}}>{v?v.name:"Unknown"}</span><Pill bg={tc+"22"} color={tc}>{l.type}</Pill></div>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:11,color:T.textDim}}>{l.date}</span>
+                        <button onClick={function(){setCommLogs(function(pv){return pv.filter(function(x){return x.id!==l.id;});});}} style={{fontSize:10,padding:"2px 7px",background:"transparent",color:T.textDim,border:"1px solid "+T.border,borderRadius:10,cursor:"pointer",fontFamily:"Georgia,serif"}}>✕</button>
+                      </div>
+                    </div>
+                    <div style={{fontSize:13,color:T.textMid,lineHeight:1.6}}>{l.note}</div>
+                  </div>;
+                })}
+              </div>
+            )}
+            {vT==="reports"&&(
+              <div>
+                <div style={crd({padding:16})}>
+                  <Sec>Session Report</Sec>
+                  <div style={{fontSize:12,color:T.textDim,marginBottom:12}}>Generate a printable recap of a session — who came, what was harvested, tasks done.</div>
+                  <SeSel val={rptSess} onChange={function(e){setRptSess(e.target.value);}} ss={ss} style={{width:"100%",marginBottom:14}}/>
+                  {(function(){
+                    var si=ss.find(function(s){return s.id===rptSess;});
+                    var attRecs=att[rptSess]||[];
+                    var totalSU=attRecs.reduce(function(a,e){return a+(e.signup||0);},0);
+                    var totalSH=attRecs.reduce(function(a,e){return a+(e.count||0);},0);
+                    var volNames=[];
+                    attRecs.forEach(function(e){(e.volIds||[]).forEach(function(id){var v=gVol(id);if(v&&!volNames.includes(v.name))volNames.push(v.name);});(e.names||"").split(",").forEach(function(n){var t=n.trim();if(t&&!volNames.includes(t))volNames.push(t);});});
+                    var sessHvs=hvs.filter(function(h){return h.session===rptSess;});
+                    var sessTasks=tasks.filter(function(t){return t.day===rptSess;});
+                    var doneTasks=sessTasks.filter(function(t){return t.done;});
+                    var totalLbs=sessHvs.filter(function(h){return h.unit==="lbs";}).reduce(function(a,h){return a+h.amount;},0);
+                    var sessLabel=si?sLbl(si):rptSess;
+                    return <div>
+                      <div style={{display:"flex",gap:10,marginBottom:16}}>
+                        <div style={{flex:1,background:T.bg2,borderRadius:14,padding:"12px 8px",textAlign:"center"}}><div style={{fontSize:22,fontWeight:300,color:T.peach}}>{totalSH}</div><div style={{fontSize:9,color:T.textDim,marginTop:2}}>Showed Up</div></div>
+                        <div style={{flex:1,background:T.bg2,borderRadius:14,padding:"12px 8px",textAlign:"center"}}><div style={{fontSize:22,fontWeight:300,color:T.teal}}>{sessHvs.length}</div><div style={{fontSize:9,color:T.textDim,marginTop:2}}>Harvests</div></div>
+                        <div style={{flex:1,background:T.bg2,borderRadius:14,padding:"12px 8px",textAlign:"center"}}><div style={{fontSize:22,fontWeight:300,color:T.green}}>{Math.round(totalLbs*10)/10}</div><div style={{fontSize:9,color:T.textDim,marginTop:2}}>lbs</div></div>
+                        <div style={{flex:1,background:T.bg2,borderRadius:14,padding:"12px 8px",textAlign:"center"}}><div style={{fontSize:22,fontWeight:300,color:T.lavender}}>{doneTasks.length+"/"+sessTasks.length}</div><div style={{fontSize:9,color:T.textDim,marginTop:2}}>Tasks</div></div>
+                      </div>
+                      {volNames.length>0&&<div style={{marginBottom:14}}>
+                        <div style={{fontSize:10,color:T.peach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Attendees</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{volNames.map(function(n){return <Pill key={n} bg={T.peach+"22"} color={T.peach}>{n}</Pill>;})}</div>
+                      </div>}
+                      {sessHvs.length>0&&<div style={{marginBottom:14}}>
+                        <div style={{fontSize:10,color:T.teal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Harvest</div>
+                        {sessHvs.map(function(h){var cc=gcc(h.crop);return <div key={h.id} style={{display:"flex",justifyContent:"space-between",fontSize:13,color:T.textMid,padding:"5px 0",borderBottom:"1px solid "+T.border+"44"}}><span style={{color:cc.ac,fontWeight:600}}>{h.crop}</span><span>{h.amount} {h.unit} — {h.quality}</span></div>;})}
+                      </div>}
+                      {sessTasks.length>0&&<div style={{marginBottom:16}}>
+                        <div style={{fontSize:10,color:T.lavender,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Tasks ({doneTasks.length}/{sessTasks.length} done)</div>
+                        {sessTasks.map(function(t){return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,padding:"3px 0",color:t.done?T.textDim:T.textMid,textDecoration:t.done?"line-through":"none"}}><span style={{color:t.done?T.green:T.textDim}}>{t.done?"✓":"○"}</span><span>{t.text}</span></div>;})}
+                      </div>}
+                      {totalSH===0&&sessHvs.length===0&&sessTasks.length===0&&<div style={{textAlign:"center",color:T.textDim,fontStyle:"italic",padding:12,marginBottom:12}}>No data logged for this session yet.</div>}
+                      <button onClick={function(){
+                        var html="<html><head><title>Session Report — "+sessLabel+"</title><style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;color:#333;padding:0 24px;}h1{font-size:22px;color:#8B7355;border-bottom:2px solid #D4AF7A;padding-bottom:10px;margin-bottom:6px;}h2{font-size:12px;color:#9C6B52;text-transform:uppercase;letter-spacing:0.12em;margin:20px 0 8px;}.meta{font-size:13px;color:#888;margin-bottom:20px;}.stats{display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap;}.stat{text-align:center;}.stat-val{font-size:28px;font-weight:300;color:#9C6B52;line-height:1;}.stat-lbl{font-size:10px;text-transform:uppercase;color:#999;margin-top:2px;}table{width:100%;border-collapse:collapse;}td{padding:7px 0;border-bottom:1px solid #eee;font-size:13px;}.done{color:#bbb;text-decoration:line-through;}.pill{display:inline-block;background:#F5EFE6;padding:3px 10px;border-radius:12px;font-size:12px;margin:2px 3px 2px 0;color:#9C6B52;}@media print{button{display:none;}}</style></head><body>";
+                        html+="<h1>Little Portion Farm — Session Report</h1>";
+                        html+="<div class='meta'>"+sessLabel+" &nbsp;·&nbsp; Generated "+todayStr+"</div>";
+                        html+="<div class='stats'><div class='stat'><div class='stat-val'>"+totalSH+"</div><div class='stat-lbl'>Showed Up</div></div><div class='stat'><div class='stat-val'>"+(totalSU||"—")+"</div><div class='stat-lbl'>Signed Up</div></div><div class='stat'><div class='stat-val'>"+Math.round(totalLbs*10)/10+"</div><div class='stat-lbl'>lbs Harvested</div></div><div class='stat'><div class='stat-val'>"+doneTasks.length+"/"+sessTasks.length+"</div><div class='stat-lbl'>Tasks Done</div></div></div>";
+                        if(volNames.length>0){html+="<h2>Attendees</h2><p>"+volNames.map(function(n){return "<span class='pill'>"+n+"</span>";}).join("")+"</p>";}
+                        if(sessHvs.length>0){html+="<h2>Harvest</h2><table><tr><th style='text-align:left;font-size:11px;color:#999;padding-bottom:4px;'>Crop</th><th style='text-align:right;font-size:11px;color:#999;padding-bottom:4px;'>Amount</th><th style='text-align:right;font-size:11px;color:#999;padding-bottom:4px;'>Quality</th></tr>";sessHvs.forEach(function(h){html+="<tr><td style='font-weight:600'>"+h.crop+"</td><td style='text-align:right'>"+h.amount+" "+h.unit+"</td><td style='text-align:right;color:#888'>"+h.quality+"</td></tr>";});html+="</table>";}
+                        if(sessTasks.length>0){html+="<h2>Tasks</h2><table>";sessTasks.forEach(function(t){html+="<tr><td style='width:20px;color:"+(t.done?"#4CAF50":"#bbb")+"'>"+(t.done?"✓":"○")+"</td><td class='"+(t.done?"done":"")+"'>"+t.text+"</td><td style='text-align:right;color:#aaa;font-size:11px'>"+t.category+"</td></tr>";});html+="</table>";}
+                        html+="</body></html>";
+                        var w=window.open("","_blank");if(w){w.document.write(html);w.document.close();setTimeout(function(){w.print();},500);}
+                      }} style={Object.assign({},btn(),{width:"100%"})}>Print / Save Report</button>
+                    </div>;
+                  })()}
+                </div>
               </div>
             )}
             {vT==="recognition"&&(
