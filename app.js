@@ -251,8 +251,8 @@ function ApiKeyInput(){
   var[editing,setEditing]=useState(!hasSaved);
   var[key,setKey]=useState("");
   var[saved,setSaved]=useState(false);
-  function save(){if(!key.trim())return;localStorage.setItem("claudeApiKey",key.trim());setHasKey(true);setEditing(false);setKey("");setSaved(true);setTimeout(function(){setSaved(false);},2500);}
-  function remove(){localStorage.removeItem("claudeApiKey");setHasKey(false);setEditing(true);setKey("");setSaved(false);}
+  function save(){if(!key.trim())return;localStorage.setItem("claudeApiKey",key.trim());sv("lpf_claudekey",key.trim());setHasKey(true);setEditing(false);setKey("");setSaved(true);setTimeout(function(){setSaved(false);},2500);}
+  function remove(){localStorage.removeItem("claudeApiKey");sv("lpf_claudekey",null);setHasKey(false);setEditing(true);setKey("");setSaved(false);}
   if(hasKey&&!editing){
     return(
       <div style={{background:"rgba(255,255,255,0.6)",borderRadius:16,padding:"16px 20px",boxShadow:"0 2px 12px rgba(180,120,60,0.1)"}}>
@@ -651,6 +651,8 @@ function Main(props){
       setMyChecks(await ld("lpf_checks",[])); setMySess(await ld("lpf_mysess",[])); setShownMilestones(await ld("lpf_milestones",[]));
       setCommLogs(await ld("lpf_commlog",[]));
       setSs(await ld("lpf_sessions",DEF_SESS));
+      var savedKey=await ld("lpf_claudekey",null);
+      if(savedKey&&!localStorage.getItem("claudeApiKey"))localStorage.setItem("claudeApiKey",savedKey);
       setLoaded(true);
     }
     loadAll();
