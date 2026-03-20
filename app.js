@@ -285,14 +285,74 @@ function LockScreen(props){
   var[pw,setPw]=useState("");
   var[err,setErr]=useState(false);
   var[shake,setShake]=useState(false);
+  var[bioAvail,setBioAvail]=useState(false);
+  var[bioReg,setBioReg]=useState(!!localStorage.getItem("lpf_bio_id"));
+  var[bioMsg,setBioMsg]=useState("");
+  var[showSetup,setShowSetup]=useState(false);
+  var[setupPending,setSetupPending]=useState(false);
+
+  useEffect(function(){
+    if(window.PublicKeyCredential&&PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable){
+      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(a){setBioAvail(a);}).catch(function(){});
+    }
+  },[]);
+
   function attempt(){
-    if(pw===APP_PW){onUnlock();}
-    else if(pw===SECRET_PW){onSecret();}
+    if(pw===APP_PW){
+      if(bioAvail&&!bioReg){setSetupPending(true);setShowSetup(true);}
+      else onUnlock();
+    } else if(pw===SECRET_PW){onSecret();}
     else{setErr(true);setShake(true);setPw("");setTimeout(function(){setShake(false);},500);setTimeout(function(){setErr(false);},2500);}
   }
+
+  function doBiometric(){
+    setBioMsg("Verifying…");
+    var credIdStr=localStorage.getItem("lpf_bio_id");
+    if(!credIdStr){setBioMsg("");return;}
+    var credId=Uint8Array.from(atob(credIdStr),function(c){return c.charCodeAt(0);});
+    var challenge=new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    navigator.credentials.get({publicKey:{
+      challenge:challenge,
+      allowCredentials:[{type:"public-key",id:credId,transports:["internal"]}],
+      userVerification:"required",
+      timeout:60000
+    }}).then(function(a){if(a){setBioMsg("");onUnlock();}}).catch(function(e){
+      setBioMsg(e.name==="NotAllowedError"?"Cancelled — use password below":"Biometric failed — use password below");
+      setTimeout(function(){setBioMsg("");},3500);
+    });
+  }
+
+  function setupBiometric(){
+    var challenge=new Uint8Array(32); crypto.getRandomValues(challenge);
+    var userId=new Uint8Array(16); crypto.getRandomValues(userId);
+    navigator.credentials.create({publicKey:{
+      challenge:challenge,
+      rp:{name:"Little Portion Farm",id:location.hostname},
+      user:{id:userId,name:"farmmanager",displayName:"Farm Manager"},
+      pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},
+      timeout:60000
+    }}).then(function(cred){
+      if(cred){localStorage.setItem("lpf_bio_id",btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));setBioReg(true);}
+      setShowSetup(false);onUnlock();
+    }).catch(function(){setShowSetup(false);onUnlock();});
+  }
+
+  function removeBiometric(){localStorage.removeItem("lpf_bio_id");setBioReg(false);}
+
   return(
     <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#fce8d0,#f5ddc0,#fce0c8)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif",padding:24}}>
       <style>{".lpfshake{animation:lpfshake 0.4s ease}@keyframes lpfshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}"}</style>
+      {showSetup&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{background:"#fff",borderRadius:24,padding:28,maxWidth:320,width:"100%",textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,0.2)"}}>
+          <div style={{fontSize:40,marginBottom:12}}>🔒</div>
+          <div style={{fontWeight:700,fontSize:16,color:T.text,marginBottom:8}}>Enable Biometric Login?</div>
+          <div style={{fontSize:13,color:T.textMid,lineHeight:1.6,marginBottom:20}}>Use Face ID or Touch ID to unlock the app instantly — no password needed.</div>
+          <button onClick={setupBiometric} style={{width:"100%",marginBottom:10,background:"linear-gradient(135deg,"+T.teal+",#4aaa99)",color:"#fff",border:"none",borderRadius:14,padding:"13px",fontSize:14,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:700}}>Set Up Face ID / Touch ID</button>
+          <button onClick={function(){setShowSetup(false);onUnlock();}} style={{width:"100%",background:"none",border:"none",fontSize:13,color:T.textDim,cursor:"pointer",fontFamily:"Georgia,serif",padding:"6px"}}>Skip for now</button>
+        </div>
+      </div>}
       <div style={{width:"100%",maxWidth:360}}>
         <div style={{textAlign:"center",marginBottom:40}}>
           <div style={{fontSize:52,marginBottom:12}}>🌾</div>
@@ -301,12 +361,20 @@ function LockScreen(props){
           <div style={{width:40,height:2,background:"linear-gradient(90deg,"+T.peach+","+T.gold+")",borderRadius:1,margin:"14px auto 0"}}/>
         </div>
         <div style={{background:"rgba(255,255,255,0.7)",borderRadius:24,padding:32,boxShadow:"0 8px 40px rgba(180,120,60,0.15)"}}>
-          <div style={{fontSize:12,color:T.textMid,textAlign:"center",marginBottom:20}}>Enter your password to continue</div>
+          {bioAvail&&bioReg&&<div style={{marginBottom:20}}>
+            <button onClick={doBiometric} style={{width:"100%",background:"linear-gradient(135deg,"+T.teal+",#4aaa99)",color:"#fff",border:"none",borderRadius:16,padding:"16px",fontSize:15,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+              <span style={{fontSize:22}}>🔒</span> Face ID / Touch ID
+            </button>
+            {bioMsg&&<div style={{textAlign:"center",fontSize:12,color:T.textDim,marginTop:8,fontStyle:"italic"}}>{bioMsg}</div>}
+            <div style={{display:"flex",alignItems:"center",gap:10,margin:"18px 0 4px"}}><div style={{flex:1,height:1,background:T.border}}/><span style={{fontSize:11,color:T.textDim}}>or use password</span><div style={{flex:1,height:1,background:T.border}}/></div>
+          </div>}
+          {!bioAvail&&!bioReg&&<div style={{fontSize:12,color:T.textMid,textAlign:"center",marginBottom:20}}>Enter your password to continue</div>}
           <div className={shake?"lpfshake":""}>
             <input type="password" value={pw} onChange={function(e){setPw(e.target.value);setErr(false);}} onKeyDown={function(e){if(e.key==="Enter")attempt();}} placeholder="Password" autoFocus style={{width:"100%",padding:"14px 18px",borderRadius:16,border:"1.5px solid "+(err?T.rose:T.border),fontSize:16,fontFamily:"Georgia,serif",background:"rgba(255,255,255,0.8)",color:T.text,outline:"none",boxSizing:"border-box",textAlign:"center",letterSpacing:"0.15em"}}/>
           </div>
           {err&&<div style={{textAlign:"center",fontSize:12,color:T.rose,marginTop:8,fontStyle:"italic"}}>Incorrect password — try again</div>}
           <button onClick={attempt} style={{width:"100%",marginTop:16,background:"linear-gradient(135deg,"+T.peach+","+T.gold+")",color:"#fff",border:"none",borderRadius:16,padding:"14px",fontSize:14,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:700}}>Enter</button>
+          {bioAvail&&bioReg&&<button onClick={removeBiometric} style={{width:"100%",marginTop:10,background:"none",border:"none",fontSize:11,color:T.textDim,cursor:"pointer",fontFamily:"Georgia,serif",padding:"4px"}}>Remove Face ID / Touch ID</button>}
         </div>
         <div style={{textAlign:"center",marginTop:24,fontSize:10,color:T.textDim,letterSpacing:"0.1em"}}>ELLICOTT CITY, MD</div>
       </div>
