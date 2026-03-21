@@ -492,7 +492,7 @@ function SecretPage(props){
         <button onClick={onLock} style={{background:"rgba(255,255,255,0.06)",border:"1px solid "+SPbdr,borderRadius:10,padding:"6px 14px",color:SPdim,fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif"}}>Lock</button>
       </div>
       <div style={{display:"flex",borderBottom:"1px solid "+SPbdr,overflowX:"auto"}}>
-        {[["home","Home"],["hours","Hours"],["reflections","Reflections"],["thoughts","Thoughts"],["gratitude","Gratitude"],["intentions","Intentions"],["goals","Goals"],["crops","Crops"],["skills","Skills"],["moments","Moments"],["bucket","Bucket List"],["favorites","Favorites"],["achievements","Achievements"]].map(function(arr){
+        {[["home","Home"],["hours","Hours"],["reflections","Reflections"],["thoughts","Thoughts"],["gratitude","Gratitude"],["intentions","Intentions"],["goals","Goals"],["crops","Crops"],["skills","Skills"],["moments","Moments"],["bucket","Bucket List"],["favorites","Favorites"],["achievements","Achievements"],["settings","Settings"]].map(function(arr){
           var k=arr[0],l=arr[1],act=view===k;
           return <button key={k} onClick={function(){setView(k);}} style={{background:"transparent",color:act?SPlav:SPdim,border:"none",borderBottom:act?"2px solid "+SPlav:"2px solid transparent",padding:"12px 16px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:act?700:400,whiteSpace:"nowrap"}}>{l}</button>;
         })}
@@ -542,16 +542,21 @@ function SecretPage(props){
               <p style={{margin:0,fontSize:14,color:SPmid,lineHeight:1.8,fontStyle:"italic"}}>"{reflections[0].text}"</p>
               <div style={{fontSize:11,color:SPdim,marginTop:8}}>{reflections[0].date}</div>
             </div>}
-            {favVols.length>0&&<div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
+            {favVols.length>0&&<div style={{background:SPcard,borderRadius:20,padding:18,border:"1px solid "+SPbdr}}>
               <div style={{fontSize:11,color:SPteal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Favorite Volunteers</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{favVols.map(function(v){return <span key={v.id} style={{background:SPbg2,color:SPteal,borderRadius:20,padding:"6px 14px",fontSize:13,border:"1px solid "+SPbdr}}>❤️ {v.name}</span>;})}</div>
             </div>}
-            <div style={{background:SPcard,borderRadius:20,padding:18,border:"1px solid "+SPbdr}}>
-              <div style={{fontSize:9,letterSpacing:"0.4em",color:SPdim,textTransform:"uppercase",fontWeight:700,marginBottom:10}}>Cloud Backup</div>
-              <div style={{fontSize:12,color:SPdim,marginBottom:12,lineHeight:1.6}}>Push saves all your data up to the cloud now. Pull restores it if something was lost.</div>
+          </div>
+        )}
+
+        {view==="settings"&&(
+          <div>
+            <div style={{background:SPcard,borderRadius:20,padding:20,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:9,letterSpacing:"0.4em",color:SPdim,textTransform:"uppercase",fontWeight:700,marginBottom:6}}>Cloud Backup</div>
+              <div style={{fontSize:13,color:SPdim,marginBottom:16,lineHeight:1.7}}>Push saves all your data to the cloud right now. Pull restores it from the cloud if something was lost.</div>
               <div style={{display:"flex",gap:8}}>
-                <button onClick={spPush} disabled={syncSt!=="idle"} style={{flex:1,background:syncSt==="pushed"?"#4a9a7a":syncSt==="error"?"#aa4444":"linear-gradient(135deg,"+SPlav+","+SPteal+")",color:"#fff",border:"none",borderRadius:12,padding:"11px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:600,opacity:syncSt!=="idle"?0.7:1}}>{syncSt==="pushing"?"Saving...":syncSt==="pushed"?"Saved ✓":"Push to Cloud"}</button>
-                <button onClick={spPull} disabled={syncSt!=="idle"} style={{flex:1,background:syncSt==="pulled"?"#4a9a7a":syncSt==="error"?"#aa4444":SPbg2,color:syncSt==="pulled"||syncSt==="error"?"#fff":SPdim,border:"1px solid "+SPbdr,borderRadius:12,padding:"11px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",opacity:syncSt!=="idle"?0.7:1}}>{syncSt==="pulling"?"Pulling...":syncSt==="pulled"?"Done! Reloading...":syncSt==="error"?"Could not reach cloud":"Pull from Cloud"}</button>
+                <button onClick={spPush} disabled={syncSt!=="idle"} style={{flex:1,background:syncSt==="pushed"?"#4a9a7a":syncSt==="error"?"#aa4444":"linear-gradient(135deg,"+SPlav+","+SPteal+")",color:"#fff",border:"none",borderRadius:12,padding:"12px",fontSize:13,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:600,opacity:syncSt!=="idle"?0.7:1}}>{syncSt==="pushing"?"Saving...":syncSt==="pushed"?"Saved ✓":"Push to Cloud"}</button>
+                <button onClick={spPull} disabled={syncSt!=="idle"} style={{flex:1,background:syncSt==="pulled"?"#4a9a7a":syncSt==="error"?"#aa4444":SPbg2,color:syncSt==="pulled"||syncSt==="error"?"#fff":SPdim,border:"1px solid "+SPbdr,borderRadius:12,padding:"12px",fontSize:13,cursor:"pointer",fontFamily:"Georgia,serif",opacity:syncSt!=="idle"?0.7:1}}>{syncSt==="pulling"?"Pulling...":syncSt==="pulled"?"Done! Reloading...":syncSt==="error"?"Could not reach cloud":"Pull from Cloud"}</button>
               </div>
             </div>
           </div>
