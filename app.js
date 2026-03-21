@@ -412,6 +412,7 @@ function SecretPage(props){
 
   useEffect(function(){
     async function init(){
+      await fbPull();
       setMyHours(await ld("sp_hours",0));
       setMyVisits(await ld("sp_visits",0));
       setReflections(await ld("sp_ref",[]));
