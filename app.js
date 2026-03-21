@@ -398,6 +398,13 @@ function SecretPage(props){
   var[favInp,setFavInp]=useState("");
   var[achInp,setAchInp]=useState("");
   var[hoursInp,setHoursInp]=useState("");
+  var[harvestedCrops,setHarvestedCrops]=useState([]);
+  var[skills,setSkills]=useState([]); var[skillInp,setSkillInp]=useState("");
+  var[gratitudes,setGratitudes]=useState([]); var[gratInp,setGratInp]=useState("");
+  var[intentions,setIntentions]=useState([]); var[intentInp,setIntentInp]=useState("");
+  var[goals,setGoals]=useState([]); var[goalInp,setGoalInp]=useState("");
+  var[moments,setMoments]=useState([]); var[momentCap,setMomentCap]=useState(""); var[momentPhoto,setMomentPhoto]=useState(null);
+  var[bucketList,setBucketList]=useState([]); var[bucketInp,setBucketInp]=useState("");
   var[qIdx,setQIdx]=useState(function(){return Math.floor(Math.random()*SECRET_QUOTES.length);});
   var todayStr=new Date().toLocaleDateString();
 
@@ -409,6 +416,13 @@ function SecretPage(props){
       setFavVols(await ld("sp_fav",[]));
       setThoughts(await ld("sp_tho",[]));
       setAchievements(await ld("sp_ach",[]));
+      setHarvestedCrops(await ld("sp_crops",[]));
+      setSkills(await ld("sp_skills",[]));
+      setGratitudes(await ld("sp_grat",[]));
+      setIntentions(await ld("sp_intent",[]));
+      setGoals(await ld("sp_goals",[]));
+      setMoments(await ld("sp_moments",[]));
+      setBucketList(await ld("sp_bucket",[]));
       setLoaded(true);
     }
     init();
@@ -419,6 +433,13 @@ function SecretPage(props){
   useEffect(function(){if(loaded)sv("sp_fav",favVols);},[favVols,loaded]);
   useEffect(function(){if(loaded)sv("sp_tho",thoughts);},[thoughts,loaded]);
   useEffect(function(){if(loaded)sv("sp_ach",achievements);},[achievements,loaded]);
+  useEffect(function(){if(loaded)sv("sp_crops",harvestedCrops);},[harvestedCrops,loaded]);
+  useEffect(function(){if(loaded)sv("sp_skills",skills);},[skills,loaded]);
+  useEffect(function(){if(loaded)sv("sp_grat",gratitudes);},[gratitudes,loaded]);
+  useEffect(function(){if(loaded)sv("sp_intent",intentions);},[intentions,loaded]);
+  useEffect(function(){if(loaded)sv("sp_goals",goals);},[goals,loaded]);
+  useEffect(function(){if(loaded)sv("sp_moments",moments);},[moments,loaded]);
+  useEffect(function(){if(loaded)sv("sp_bucket",bucketList);},[bucketList,loaded]);
 
   if(!loaded)return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:SPbg,fontFamily:"Georgia,serif",color:SPdim,fontSize:14}}>Loading...</div>;
 
@@ -442,6 +463,15 @@ function SecretPage(props){
   function addFav(){if(!favInp.trim())return;setFavVols(function(pv){return pv.concat([{id:mkid(),name:favInp.trim(),date:todayStr}]);});setFavInp("");}
   function addAch(){if(!achInp.trim())return;setAchievements(function(pv){return[{id:mkid(),text:achInp.trim(),date:todayStr}].concat(pv);});setAchInp("");}
   function logHours(){var h=parseFloat(hoursInp);if(!h)return;setMyHours(function(pv){return Math.round((pv+h)*10)/10;});setHoursInp("");}
+  function toggleCrop(c){setHarvestedCrops(function(pv){return pv.includes(c)?pv.filter(function(x){return x!==c;}):pv.concat([c]);});}
+  function addSkill(){if(!skillInp.trim())return;setSkills(function(pv){return[{id:mkid(),text:skillInp.trim(),date:todayStr}].concat(pv);});setSkillInp("");}
+  function addGrat(){if(!gratInp.trim())return;setGratitudes(function(pv){return[{id:mkid(),text:gratInp.trim(),date:todayStr}].concat(pv);});setGratInp("");}
+  function addIntent(){if(!intentInp.trim())return;setIntentions(function(pv){return[{id:mkid(),text:intentInp.trim(),date:todayStr}].concat(pv);});setIntentInp("");}
+  function addGoal(){if(!goalInp.trim())return;setGoals(function(pv){return[{id:mkid(),text:goalInp.trim(),done:false,date:todayStr}].concat(pv);});setGoalInp("");}
+  function toggleGoal(id){setGoals(function(pv){return pv.map(function(g){return g.id===id?Object.assign({},g,{done:!g.done}):g;});});}
+  function addMoment(){if(!momentCap.trim())return;setMoments(function(pv){return[{id:mkid(),caption:momentCap.trim(),photo:momentPhoto,date:todayStr}].concat(pv);});setMomentCap("");setMomentPhoto(null);}
+  function addBucket(){if(!bucketInp.trim())return;setBucketList(function(pv){return[{id:mkid(),text:bucketInp.trim(),done:false,date:todayStr}].concat(pv);});setBucketInp("");}
+  function toggleBucket(id){setBucketList(function(pv){return pv.map(function(b){return b.id===id?Object.assign({},b,{done:!b.done}):b;});});}
 
   var darkInp={padding:"12px 16px",borderRadius:14,border:"1px solid "+SPbdr,background:SPbg2,color:SPtext,fontSize:14,fontFamily:"Georgia,serif",outline:"none",boxSizing:"border-box"};
   var darkBtn={background:"linear-gradient(135deg,"+SPlav+","+SPpeach+")",color:"#fff",border:"none",borderRadius:14,padding:"12px 20px",fontSize:13,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:600};
@@ -456,7 +486,7 @@ function SecretPage(props){
         <button onClick={onLock} style={{background:"rgba(255,255,255,0.06)",border:"1px solid "+SPbdr,borderRadius:10,padding:"6px 14px",color:SPdim,fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif"}}>Lock</button>
       </div>
       <div style={{display:"flex",borderBottom:"1px solid "+SPbdr,overflowX:"auto"}}>
-        {[["home","Home"],["hours","Hours"],["reflections","Reflections"],["thoughts","Thoughts"],["favorites","Favorites"],["achievements","Achievements"]].map(function(arr){
+        {[["home","Home"],["hours","Hours"],["reflections","Reflections"],["thoughts","Thoughts"],["gratitude","Gratitude"],["intentions","Intentions"],["goals","Goals"],["crops","Crops"],["skills","Skills"],["moments","Moments"],["bucket","Bucket List"],["favorites","Favorites"],["achievements","Achievements"]].map(function(arr){
           var k=arr[0],l=arr[1],act=view===k;
           return <button key={k} onClick={function(){setView(k);}} style={{background:"transparent",color:act?SPlav:SPdim,border:"none",borderBottom:act?"2px solid "+SPlav:"2px solid transparent",padding:"12px 16px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:act?700:400,whiteSpace:"nowrap"}}>{l}</button>;
         })}
@@ -639,6 +669,147 @@ function SecretPage(props){
                 <button onClick={function(){setAchievements(function(pv){return pv.filter(function(x){return x.id!==a.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:SPdim,fontSize:16}}>✕</button>
               </div>;
             })}
+          </div>
+        )}
+
+        {view==="crops"&&(
+          <div>
+            <div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:11,color:SPteal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Crops I've Harvested</div>
+              <div style={{fontSize:12,color:SPdim,marginBottom:16,lineHeight:1.6}}>Tap a crop to mark it as harvested. Your personal produce badge wall.</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+                {[{n:"Kale",ic:"🥬"},{n:"Spinach",ic:"🌿"},{n:"Arugula",ic:"🌱"},{n:"Lettuce",ic:"🥗"},{n:"Strawberries",ic:"🍓"},{n:"Tomatoes",ic:"🍅"},{n:"Herbs",ic:"🌾"},{n:"Beans",ic:"🫘"},{n:"Squash",ic:"🎃"},{n:"Carrots",ic:"🥕"},{n:"Radishes",ic:"🌸"},{n:"Peppers",ic:"🫑"},{n:"Cucumbers",ic:"🥒"},{n:"Zucchini",ic:"🥬"},{n:"Garlic",ic:"🧄"},{n:"Onions",ic:"🧅"},{n:"Potatoes",ic:"🥔"},{n:"Sweet Potatoes",ic:"🍠"},{n:"Beets",ic:"🟣"},{n:"Broccoli",ic:"🥦"}].map(function(crop){
+                  var done=harvestedCrops.includes(crop.n);
+                  return <button key={crop.n} onClick={function(){toggleCrop(crop.n);}} style={{background:done?"linear-gradient(135deg,"+SPteal+"33,"+SPlav+"33)":"transparent",color:done?SPteal:SPdim,border:"1px solid "+(done?SPteal:SPbdr),borderRadius:20,padding:"8px 14px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:done?700:400,display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}><span style={{fontSize:16}}>{crop.ic}</span>{crop.n}{done&&<span style={{fontSize:10}}>✓</span>}</button>;
+                })}
+              </div>
+            </div>
+            {harvestedCrops.length>0&&<div style={{background:SPcard,borderRadius:20,padding:18,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:11,color:SPteal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:12}}>Your Harvest Badge Wall</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12}}>
+                {[{n:"Kale",ic:"🥬"},{n:"Spinach",ic:"🌿"},{n:"Arugula",ic:"🌱"},{n:"Lettuce",ic:"🥗"},{n:"Strawberries",ic:"🍓"},{n:"Tomatoes",ic:"🍅"},{n:"Herbs",ic:"🌾"},{n:"Beans",ic:"🫘"},{n:"Squash",ic:"🎃"},{n:"Carrots",ic:"🥕"},{n:"Radishes",ic:"🌸"},{n:"Peppers",ic:"🫑"},{n:"Cucumbers",ic:"🥒"},{n:"Zucchini",ic:"🥬"},{n:"Garlic",ic:"🧄"},{n:"Onions",ic:"🧅"},{n:"Potatoes",ic:"🥔"},{n:"Sweet Potatoes",ic:"🍠"},{n:"Beets",ic:"🟣"},{n:"Broccoli",ic:"🥦"}].filter(function(c){return harvestedCrops.includes(c.n);}).map(function(c){return <div key={c.n} style={{background:"linear-gradient(135deg,#1a2a2a,#0f1a1a)",border:"1px solid "+SPteal+"44",borderRadius:16,padding:"12px 10px",textAlign:"center",minWidth:64}}><div style={{fontSize:28}}>{c.ic}</div><div style={{fontSize:10,color:SPteal,marginTop:4,fontWeight:600}}>{c.n}</div></div>;})}
+              </div>
+              <div style={{fontSize:12,color:SPdim}}>{harvestedCrops.length} of 20 crops harvested</div>
+            </div>}
+          </div>
+        )}
+
+        {view==="skills"&&(
+          <div>
+            <div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:11,color:SPlav,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Skills Learned</div>
+              <div style={{display:"flex",gap:8}}>
+                <input value={skillInp} onChange={function(e){setSkillInp(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")addSkill();}} placeholder="e.g. Using the broadfork, transplanting seedlings..." style={Object.assign({},darkInp,{flex:1})}/>
+                <button onClick={addSkill} disabled={!skillInp.trim()} style={Object.assign({},darkBtn,{opacity:!skillInp.trim()?0.4:1})}>Add</button>
+              </div>
+            </div>
+            {skills.length===0&&<div style={{textAlign:"center",color:SPdim,fontStyle:"italic",padding:20}}>No skills logged yet — what have you learned?</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {skills.map(function(s,i){return <div key={s.id} style={{background:SPcard,borderRadius:16,padding:"14px 18px",border:"1px solid "+SPbdr,display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,"+SPlav+","+SPpeach+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",flexShrink:0}}>{skills.length-i}</div>
+                <div style={{flex:1}}><div style={{fontSize:14,color:SPtext,lineHeight:1.5}}>{s.text}</div><div style={{fontSize:11,color:SPdim,marginTop:2}}>{s.date}</div></div>
+                <button onClick={function(){setSkills(function(pv){return pv.filter(function(x){return x.id!==s.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:SPdim,fontSize:16}}>✕</button>
+              </div>;})}
+            </div>
+          </div>
+        )}
+
+        {view==="gratitude"&&(
+          <div>
+            <div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:11,color:SPgold,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Today I'm Grateful For...</div>
+              <div style={{fontSize:12,color:SPdim,marginBottom:12,lineHeight:1.6}}>Quick, raw, private — just what's on your heart.</div>
+              <textarea value={gratInp} onChange={function(e){setGratInp(e.target.value);}} placeholder="I'm grateful for..." rows={3} style={Object.assign({},darkInp,{width:"100%",resize:"vertical",lineHeight:1.7})}/>
+              <button onClick={addGrat} disabled={!gratInp.trim()} style={Object.assign({},darkBtn,{marginTop:10,width:"100%",background:"linear-gradient(135deg,"+SPgold+","+SPteal+")",opacity:!gratInp.trim()?0.4:1})}>Save</button>
+            </div>
+            {gratitudes.length===0&&<div style={{textAlign:"center",color:SPdim,fontStyle:"italic",padding:20}}>Nothing logged yet — what are you grateful for today?</div>}
+            {gratitudes.map(function(g){return <div key={g.id} style={{background:SPcard,borderRadius:18,marginBottom:10,overflow:"hidden",border:"1px solid "+SPbdr}}>
+              <div style={{height:2,background:"linear-gradient(90deg,"+SPgold+","+SPteal+",transparent)"}}/>
+              <div style={{padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:10}}>
+                <span style={{fontSize:18,flexShrink:0}}>🙏</span>
+                <div style={{flex:1}}><p style={{margin:0,fontSize:14,color:SPmid,lineHeight:1.7}}>{g.text}</p><div style={{fontSize:11,color:SPdim,marginTop:6}}>{g.date}</div></div>
+                <button onClick={function(){setGratitudes(function(pv){return pv.filter(function(x){return x.id!==g.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:SPdim,fontSize:16}}>✕</button>
+              </div>
+            </div>;})}
+          </div>
+        )}
+
+        {view==="intentions"&&(
+          <div>
+            <div style={{background:"linear-gradient(135deg,#12102a,#0f0f20)",borderRadius:20,padding:20,marginBottom:16,border:"1px solid "+SPbdr,position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,"+SPlav+","+SPteal+")"}}/>
+              <div style={{fontSize:11,color:SPlav,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Intentions & Prayers</div>
+              <div style={{fontSize:12,color:SPdim,marginBottom:14,lineHeight:1.6,fontStyle:"italic"}}>"Ora et Labora — Pray and Work." Set your intention for a visit, or leave a quiet prayer here.</div>
+              <textarea value={intentInp} onChange={function(e){setIntentInp(e.target.value);}} placeholder="Today I offer this time for... / Lord, I pray for..." rows={4} style={Object.assign({},darkInp,{width:"100%",resize:"vertical",lineHeight:1.8,fontStyle:"italic"})}/>
+              <button onClick={addIntent} disabled={!intentInp.trim()} style={Object.assign({},darkBtn,{marginTop:10,width:"100%",background:"linear-gradient(135deg,"+SPlav+","+SPteal+")",opacity:!intentInp.trim()?0.4:1})}>Offer It</button>
+            </div>
+            {intentions.length===0&&<div style={{textAlign:"center",color:SPdim,fontStyle:"italic",padding:20}}>No intentions yet.</div>}
+            {intentions.map(function(it){return <div key={it.id} style={{background:SPcard,borderRadius:18,marginBottom:12,overflow:"hidden",border:"1px solid "+SPbdr}}>
+              <div style={{height:3,background:"linear-gradient(90deg,"+SPlav+",transparent)"}}/>
+              <div style={{padding:"16px 18px",display:"flex",alignItems:"flex-start",gap:10}}>
+                <span style={{fontSize:18,flexShrink:0}}>✝</span>
+                <div style={{flex:1}}><p style={{margin:0,fontSize:14,color:SPmid,lineHeight:1.8,fontStyle:"italic"}}>"{it.text}"</p><div style={{fontSize:11,color:SPdim,marginTop:6}}>{it.date}</div></div>
+                <button onClick={function(){setIntentions(function(pv){return pv.filter(function(x){return x.id!==it.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:SPdim,fontSize:16}}>✕</button>
+              </div>
+            </div>;})}
+          </div>
+        )}
+
+        {view==="goals"&&(
+          <div>
+            <div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:11,color:SPpeach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Personal Goals</div>
+              <div style={{display:"flex",gap:8}}>
+                <input value={goalInp} onChange={function(e){setGoalInp(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")addGoal();}} placeholder="e.g. Help with 5 plantings this spring..." style={Object.assign({},darkInp,{flex:1})}/>
+                <button onClick={addGoal} disabled={!goalInp.trim()} style={Object.assign({},darkBtn,{background:"linear-gradient(135deg,"+SPpeach+","+SPgold+")",opacity:!goalInp.trim()?0.4:1})}>Add</button>
+              </div>
+            </div>
+            {goals.length===0&&<div style={{textAlign:"center",color:SPdim,fontStyle:"italic",padding:20}}>No goals set yet — what do you want to accomplish?</div>}
+            {(function(){var open=goals.filter(function(g){return!g.done;});var done=goals.filter(function(g){return g.done;});return [["Active",open,SPpeach],["Completed",done,SPteal]].map(function(arr){var label=arr[0],list=arr[1],color=arr[2];if(!list.length)return null;return <div key={label} style={{marginBottom:14}}><div style={{fontSize:10,color:color,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>{label}</div>{list.map(function(g){return <div key={g.id} onClick={function(){toggleGoal(g.id);}} style={{background:SPcard,borderRadius:16,padding:"14px 18px",marginBottom:8,border:"1px solid "+(g.done?SPteal+"44":SPbdr),display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+              <div style={{width:22,height:22,borderRadius:"50%",border:"2px solid "+(g.done?SPteal:SPbdr),background:g.done?"linear-gradient(135deg,"+SPteal+","+SPlav+")":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{g.done&&<span style={{color:"#fff",fontSize:12}}>✓</span>}</div>
+              <div style={{flex:1,textDecoration:g.done?"line-through":"none",color:g.done?SPdim:SPtext,fontSize:14,lineHeight:1.5}}>{g.text}</div>
+              <div style={{fontSize:11,color:SPdim,whiteSpace:"nowrap"}}>{g.date}</div>
+              <button onClick={function(e){e.stopPropagation();setGoals(function(pv){return pv.filter(function(x){return x.id!==g.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:SPdim,fontSize:16}}>✕</button>
+            </div>;})}</div>;});})()}
+          </div>
+        )}
+
+        {view==="moments"&&(
+          <div>
+            <div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:11,color:SPpeach,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6}}>Favorite Moments</div>
+              <div style={{fontSize:12,color:SPdim,marginBottom:14,lineHeight:1.6}}>A private album of standout days at the farm.</div>
+              {momentPhoto?<div style={{position:"relative",marginBottom:12}}><img src={momentPhoto} style={{width:"100%",maxHeight:220,objectFit:"cover",borderRadius:14,display:"block"}}/><button onClick={function(){setMomentPhoto(null);}} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:26,height:26,cursor:"pointer",fontSize:14,lineHeight:"26px",textAlign:"center",padding:0}}>✕</button></div>:<button onClick={function(){var inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.capture="environment";inp.onchange=function(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){var img=new Image();img.onload=function(){var MAX=900,w=img.width,h=img.height;if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}var c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);setMomentPhoto(c.toDataURL("image/jpeg",0.75));};img.src=ev.target.result;};reader.readAsDataURL(file);};inp.click();}} style={{width:"100%",background:"transparent",border:"1.5px dashed "+SPbdr,borderRadius:14,padding:"16px",fontSize:12,color:SPdim,cursor:"pointer",fontFamily:"Georgia,serif",marginBottom:12}}>📷 Add Photo (optional)</button>}
+              <input value={momentCap} onChange={function(e){setMomentCap(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")addMoment();}} placeholder="A line about this moment..." style={Object.assign({},darkInp,{width:"100%",marginBottom:10})}/>
+              <button onClick={addMoment} disabled={!momentCap.trim()} style={Object.assign({},darkBtn,{width:"100%",background:"linear-gradient(135deg,"+SPpeach+","+SPlav+")",opacity:!momentCap.trim()?0.4:1})}>Save Moment</button>
+            </div>
+            {moments.length===0&&<div style={{textAlign:"center",color:SPdim,fontStyle:"italic",padding:20}}>No moments saved yet.</div>}
+            {moments.map(function(m){return <div key={m.id} style={{background:SPcard,borderRadius:20,marginBottom:14,overflow:"hidden",border:"1px solid "+SPbdr}}>
+              {m.photo&&<img src={m.photo} style={{width:"100%",maxHeight:220,objectFit:"cover",display:"block"}}/>}
+              <div style={{padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:10}}>
+                <span style={{fontSize:18,flexShrink:0}}>✨</span>
+                <div style={{flex:1}}><p style={{margin:0,fontSize:14,color:SPtext,lineHeight:1.7}}>{m.caption}</p><div style={{fontSize:11,color:SPdim,marginTop:6}}>{m.date}</div></div>
+                <button onClick={function(){setMoments(function(pv){return pv.filter(function(x){return x.id!==m.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:SPdim,fontSize:16}}>✕</button>
+              </div>
+            </div>;})}
+          </div>
+        )}
+
+        {view==="bucket"&&(
+          <div>
+            <div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:11,color:SPteal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Farm Bucket List</div>
+              <div style={{display:"flex",gap:8}}>
+                <input value={bucketInp} onChange={function(e){setBucketInp(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")addBucket();}} placeholder="e.g. Drive the tractor, be there for a first harvest..." style={Object.assign({},darkInp,{flex:1})}/>
+                <button onClick={addBucket} disabled={!bucketInp.trim()} style={Object.assign({},darkBtn,{background:"linear-gradient(135deg,"+SPteal+","+SPlav+")",opacity:!bucketInp.trim()?0.4:1})}>Add</button>
+              </div>
+            </div>
+            {bucketList.length===0&&<div style={{textAlign:"center",color:SPdim,fontStyle:"italic",padding:20}}>Nothing on the list yet — dream big.</div>}
+            {(function(){var open=bucketList.filter(function(b){return!b.done;});var done=bucketList.filter(function(b){return b.done;});return [["To Do",open,SPteal],["Done",done,SPgold]].map(function(arr){var label=arr[0],list=arr[1],color=arr[2];if(!list.length)return null;return <div key={label} style={{marginBottom:14}}><div style={{fontSize:10,color:color,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>{label}</div>{list.map(function(b){return <div key={b.id} onClick={function(){toggleBucket(b.id);}} style={{background:SPcard,borderRadius:16,padding:"14px 18px",marginBottom:8,border:"1px solid "+(b.done?SPgold+"44":SPbdr),display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+              <div style={{width:22,height:22,borderRadius:"50%",border:"2px solid "+(b.done?SPgold:SPbdr),background:b.done?"linear-gradient(135deg,"+SPgold+","+SPpeach+")":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{b.done&&<span style={{color:"#fff",fontSize:11}}>✓</span>}</div>
+              <div style={{flex:1,textDecoration:b.done?"line-through":"none",color:b.done?SPdim:SPtext,fontSize:14,lineHeight:1.5}}>{b.text}</div>
+              <button onClick={function(e){e.stopPropagation();setBucketList(function(pv){return pv.filter(function(x){return x.id!==b.id;});});}} style={{background:"none",border:"none",cursor:"pointer",color:SPdim,fontSize:16}}>✕</button>
+            </div>;})}</div>;});})()}
           </div>
         )}
 
