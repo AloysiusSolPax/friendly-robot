@@ -299,7 +299,9 @@ function LockScreen(props){
 
   function attempt(){
     if(pw===APP_PW){
-      if(bioAvail&&!bioReg){setSetupPending(true);setShowSetup(true);}
+      var todayStr=new Date().toDateString();
+      var skipDate=localStorage.getItem("lpf_bio_skip_date");
+      if(bioAvail&&!bioReg&&skipDate!==todayStr){setSetupPending(true);setShowSetup(true);}
       else onUnlock();
     } else if(pw===SECRET_PW){onSecret();}
     else{setErr(true);setShake(true);setPw("");setTimeout(function(){setShake(false);},500);setTimeout(function(){setErr(false);},2500);}
@@ -336,7 +338,7 @@ function LockScreen(props){
     }}).then(function(cred){
       if(cred){localStorage.setItem("lpf_bio_id",btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));setBioReg(true);}
       setShowSetup(false);onUnlock();
-    }).catch(function(){setShowSetup(false);onUnlock();});
+    }).catch(function(){localStorage.setItem("lpf_bio_skip_date",new Date().toDateString());setShowSetup(false);onUnlock();});
   }
 
   function removeBiometric(){localStorage.removeItem("lpf_bio_id");setBioReg(false);}
@@ -350,7 +352,7 @@ function LockScreen(props){
           <div style={{fontWeight:700,fontSize:16,color:T.text,marginBottom:8}}>Enable Biometric Login?</div>
           <div style={{fontSize:13,color:T.textMid,lineHeight:1.6,marginBottom:20}}>Use Face ID or Touch ID to unlock the app instantly — no password needed.</div>
           <button onClick={setupBiometric} style={{width:"100%",marginBottom:10,background:"linear-gradient(135deg,"+T.teal+",#4aaa99)",color:"#fff",border:"none",borderRadius:14,padding:"13px",fontSize:14,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:700}}>Set Up Face ID / Touch ID</button>
-          <button onClick={function(){setShowSetup(false);onUnlock();}} style={{width:"100%",background:"none",border:"none",fontSize:13,color:T.textDim,cursor:"pointer",fontFamily:"Georgia,serif",padding:"6px"}}>Skip for now</button>
+          <button onClick={function(){localStorage.setItem("lpf_bio_skip_date",new Date().toDateString());setShowSetup(false);onUnlock();}} style={{width:"100%",background:"none",border:"none",fontSize:13,color:T.textDim,cursor:"pointer",fontFamily:"Georgia,serif",padding:"6px"}}>Set Up Later in Settings</button>
         </div>
       </div>}
       <div style={{width:"100%",maxWidth:360}}>
@@ -887,10 +889,29 @@ function Main(props){
   var[commLogs,setCommLogs]=useState([]);
   var[commVol,setCommVol]=useState(""); var[commNote,setCommNote]=useState(""); var[commType,setCommType]=useState("Conversation"); var[commFU,setCommFU]=useState(false);
   var[rptSess,setRptSess]=useState("s6");
+  var[sBioAvail,setSBioAvail]=useState(false);
+  var[sBioReg,setSBioReg]=useState(!!localStorage.getItem("lpf_bio_id"));
+  var[sBioMsg,setSBioMsg]=useState("");
 
   var dayOfYear=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
   var todayQuote=QUOTES[dayOfYear%QUOTES.length];
   var upcomingSs=(function(){var now=new Date();now.setHours(0,0,0,0);return ss.filter(function(s){var p=s.date.split("/");return new Date(p[2],p[0]-1,p[1])>=now;});})();
+
+  useEffect(function(){
+    if(window.PublicKeyCredential&&PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable){
+      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(a){setSBioAvail(a);}).catch(function(){});
+    }
+  },[]);
+  function setupBioSettings(){
+    setSBioMsg("Opening Face ID / Touch ID...");
+    var challenge=new Uint8Array(32);crypto.getRandomValues(challenge);
+    var userId=new Uint8Array(16);crypto.getRandomValues(userId);
+    navigator.credentials.create({publicKey:{challenge:challenge,rp:{name:"Little Portion Farm",id:location.hostname},user:{id:userId,name:"farmmanager",displayName:"Farm Manager"},pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},timeout:60000}}).then(function(cred){
+      if(cred){localStorage.setItem("lpf_bio_id",btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));localStorage.removeItem("lpf_bio_skip_date");setSBioReg(true);setSBioMsg("Face ID / Touch ID set up successfully!");}
+    }).catch(function(){setSBioMsg("Setup cancelled.");});
+    setTimeout(function(){setSBioMsg("");},4000);
+  }
+  function removeBioSettings(){localStorage.removeItem("lpf_bio_id");setSBioReg(false);setSBioMsg("");}
 
   useEffect(function(){
     async function loadAll(){
@@ -2132,6 +2153,20 @@ function Main(props){
 
         {tab==="settings"&&(
           <div>
+            {sBioAvail&&<div style={crd({padding:20})}>
+              <Sec>Biometric Login</Sec>
+              {sBioReg?<div>
+                <div style={{display:"flex",alignItems:"center",gap:12,background:T.tealBg,borderRadius:14,padding:"14px 16px",marginBottom:14}}>
+                  <span style={{fontSize:22}}>🔒</span>
+                  <div><div style={{fontSize:13,fontWeight:700,color:T.teal}}>Face ID / Touch ID is set up</div><div style={{fontSize:11,color:T.textDim,marginTop:2}}>You can unlock the app without a password.</div></div>
+                </div>
+                <button onClick={removeBioSettings} style={Object.assign({},btn2(T.rose),{width:"100%"})}>Remove Face ID / Touch ID</button>
+              </div>:<div>
+                <div style={{fontSize:13,color:T.textMid,lineHeight:1.6,marginBottom:14}}>Set up Face ID or Touch ID to unlock the app instantly — no password needed.</div>
+                <button onClick={setupBioSettings} style={Object.assign({},btn(T.teal,"#fff"),{width:"100%"})}>Set Up Face ID / Touch ID</button>
+              </div>}
+              {sBioMsg&&<div style={{textAlign:"center",fontSize:12,color:sBioMsg.includes("success")?T.teal:T.textDim,marginTop:10,fontStyle:"italic"}}>{sBioMsg}</div>}
+            </div>}
             <div style={crd({padding:20})}>
               <Sec>Claude AI Settings</Sec>
               <div style={{fontSize:13,color:T.textMid,marginBottom:16,lineHeight:1.6}}>Your API key is saved on this device and used for AI features like smart task adding, journal writing, observations, and technique cards.</div>
