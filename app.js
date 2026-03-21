@@ -387,6 +387,7 @@ function SecretPage(props){
   var[loaded,setLoaded]=useState(false);
   var[view,setView]=useState("home");
   var[myHours,setMyHours]=useState(0);
+  var[myVisits,setMyVisits]=useState(0);
   var[reflections,setReflections]=useState([]);
   var[favVols,setFavVols]=useState([]);
   var[thoughts,setThoughts]=useState([]);
@@ -403,6 +404,7 @@ function SecretPage(props){
   useEffect(function(){
     async function init(){
       setMyHours(await ld("sp_hours",0));
+      setMyVisits(await ld("sp_visits",0));
       setReflections(await ld("sp_ref",[]));
       setFavVols(await ld("sp_fav",[]));
       setThoughts(await ld("sp_tho",[]));
@@ -412,6 +414,7 @@ function SecretPage(props){
     init();
   },[]);
   useEffect(function(){if(loaded)sv("sp_hours",myHours);},[myHours,loaded]);
+  useEffect(function(){if(loaded)sv("sp_visits",myVisits);},[myVisits,loaded]);
   useEffect(function(){if(loaded)sv("sp_ref",reflections);},[reflections,loaded]);
   useEffect(function(){if(loaded)sv("sp_fav",favVols);},[favVols,loaded]);
   useEffect(function(){if(loaded)sv("sp_tho",thoughts);},[thoughts,loaded]);
@@ -477,6 +480,7 @@ function SecretPage(props){
                 <div style={{textAlign:"center"}}>
                   <div style={{fontSize:48,fontWeight:300,color:SPgold,lineHeight:1}}>{myHours}</div>
                   <div style={{fontSize:10,color:SPdim,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>Total Hours</div>
+                  <div style={{fontSize:13,color:SPlav,marginTop:8,fontWeight:600}}>{myVisits} <span style={{fontSize:10,color:SPdim,fontWeight:400,textTransform:"uppercase",letterSpacing:"0.08em"}}>{myVisits===1?"Visit":"Visits"}</span></div>
                 </div>
                 <div style={{flex:1,borderLeft:"1px solid "+SPbdr,paddingLeft:20}}>
                   {nextM?<div>
@@ -517,11 +521,22 @@ function SecretPage(props){
                 <input type="number" value={hoursInp} onChange={function(e){setHoursInp(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")logHours();}} placeholder="Hours" style={Object.assign({},darkInp,{flex:1,fontSize:18,textAlign:"center"})}/>
                 <button onClick={logHours} disabled={!hoursInp} style={Object.assign({},darkBtn,{opacity:!hoursInp?0.4:1})}>Add</button>
               </div>
-              <div style={{textAlign:"center",marginTop:16}}>
-                <div style={{fontSize:56,fontWeight:300,color:SPgold,lineHeight:1}}>{myHours}</div>
-                <div style={{fontSize:11,color:SPdim,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>Total Hours Volunteered</div>
+              <div style={{display:"flex",gap:16,alignItems:"flex-end",marginTop:16,justifyContent:"center"}}>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontSize:56,fontWeight:300,color:SPgold,lineHeight:1}}>{myHours}</div>
+                  <div style={{fontSize:11,color:SPdim,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>Total Hours</div>
+                </div>
+                <div style={{width:"1px",height:60,background:SPbdr}}/>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontSize:56,fontWeight:300,color:SPlav,lineHeight:1}}>{myVisits}</div>
+                  <div style={{fontSize:11,color:SPdim,textTransform:"uppercase",letterSpacing:"0.1em",marginTop:4}}>{myVisits===1?"Visit":"Visits"}</div>
+                </div>
               </div>
-              {myHours>0&&<button onClick={function(){setMyHours(0);}} style={{marginTop:12,background:"transparent",color:SPdim,border:"1px solid "+SPbdr,borderRadius:10,padding:"6px 14px",fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif",display:"block",marginLeft:"auto"}}>Reset</button>}
+              <button onClick={function(){setMyVisits(function(pv){return pv+1;});}} style={Object.assign({},darkBtn,{width:"100%",marginTop:16,background:"linear-gradient(135deg,"+SPlav+"99,"+SPteal+"99)"})}>+ Log a Visit to the Farm</button>
+              <div style={{display:"flex",gap:8,marginTop:10,justifyContent:"flex-end"}}>
+                {myHours>0&&<button onClick={function(){setMyHours(0);}} style={{background:"transparent",color:SPdim,border:"1px solid "+SPbdr,borderRadius:10,padding:"6px 14px",fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif"}}>Reset Hours</button>}
+                {myVisits>0&&<button onClick={function(){setMyVisits(0);}} style={{background:"transparent",color:SPdim,border:"1px solid "+SPbdr,borderRadius:10,padding:"6px 14px",fontSize:11,cursor:"pointer",fontFamily:"Georgia,serif"}}>Reset Visits</button>}
+              </div>
             </div>
             <div style={{background:SPcard,borderRadius:20,padding:18,border:"1px solid "+SPbdr}}>
               <div style={{fontSize:11,color:SPlav,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:14}}>Milestones</div>
