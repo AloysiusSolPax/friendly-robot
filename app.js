@@ -11,7 +11,7 @@ window.storage = {
   set: async function(key, val) {
     try { localStorage.setItem(key, val); } catch(e) {}
     try {
-      fetch(FB_URL + "/" + key + ".json", {
+      await fetch(FB_URL + "/" + key + ".json", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: val
@@ -408,6 +408,7 @@ function SecretPage(props){
   var[moments,setMoments]=useState([]); var[momentCap,setMomentCap]=useState(""); var[momentPhoto,setMomentPhoto]=useState(null);
   var[bucketList,setBucketList]=useState([]); var[bucketInp,setBucketInp]=useState("");
   var[qIdx,setQIdx]=useState(function(){return Math.floor(Math.random()*SECRET_QUOTES.length);});
+  var[syncSt,setSyncSt]=useState("idle");
   var todayStr=new Date().toLocaleDateString();
 
   useEffect(function(){
@@ -466,6 +467,8 @@ function SecretPage(props){
   function addFav(){if(!favInp.trim())return;setFavVols(function(pv){return pv.concat([{id:mkid(),name:favInp.trim(),date:todayStr}]);});setFavInp("");}
   function addAch(){if(!achInp.trim())return;setAchievements(function(pv){return[{id:mkid(),text:achInp.trim(),date:todayStr}].concat(pv);});setAchInp("");}
   function logHours(){var h=parseFloat(hoursInp);if(!h)return;setMyHours(function(pv){return Math.round((pv+h)*10)/10;});setHoursInp("");}
+  async function spPull(){setSyncSt("pulling");var ok=await fbPull();if(ok){setSyncSt("pulled");setTimeout(function(){window.location.reload();},1200);}else{setSyncSt("error");setTimeout(function(){setSyncSt("idle");},3000);}}
+  async function spPush(){setSyncSt("pushing");try{await sv("sp_hours",myHours);await sv("sp_visits",myVisits);await sv("sp_ref",reflections);await sv("sp_fav",favVols);await sv("sp_tho",thoughts);await sv("sp_ach",achievements);await sv("sp_crops",harvestedCrops);await sv("sp_skills",skills);await sv("sp_grat",gratitudes);await sv("sp_intent",intentions);await sv("sp_goals",goals);await sv("sp_moments",moments);await sv("sp_bucket",bucketList);setSyncSt("pushed");setTimeout(function(){setSyncSt("idle");},2500);}catch(e){setSyncSt("error");setTimeout(function(){setSyncSt("idle");},3000);}}
   function toggleCrop(c){setHarvestedCrops(function(pv){return pv.includes(c)?pv.filter(function(x){return x!==c;}):pv.concat([c]);});}
   function addSkill(){if(!skillInp.trim())return;setSkills(function(pv){return[{id:mkid(),text:skillInp.trim(),date:todayStr}].concat(pv);});setSkillInp("");}
   function addGrat(){if(!gratInp.trim())return;setGratitudes(function(pv){return[{id:mkid(),text:gratInp.trim(),date:todayStr}].concat(pv);});setGratInp("");}
@@ -539,10 +542,18 @@ function SecretPage(props){
               <p style={{margin:0,fontSize:14,color:SPmid,lineHeight:1.8,fontStyle:"italic"}}>"{reflections[0].text}"</p>
               <div style={{fontSize:11,color:SPdim,marginTop:8}}>{reflections[0].date}</div>
             </div>}
-            {favVols.length>0&&<div style={{background:SPcard,borderRadius:20,padding:18,border:"1px solid "+SPbdr}}>
+            {favVols.length>0&&<div style={{background:SPcard,borderRadius:20,padding:18,marginBottom:16,border:"1px solid "+SPbdr}}>
               <div style={{fontSize:11,color:SPteal,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Favorite Volunteers</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{favVols.map(function(v){return <span key={v.id} style={{background:SPbg2,color:SPteal,borderRadius:20,padding:"6px 14px",fontSize:13,border:"1px solid "+SPbdr}}>❤️ {v.name}</span>;})}</div>
             </div>}
+            <div style={{background:SPcard,borderRadius:20,padding:18,border:"1px solid "+SPbdr}}>
+              <div style={{fontSize:9,letterSpacing:"0.4em",color:SPdim,textTransform:"uppercase",fontWeight:700,marginBottom:10}}>Cloud Backup</div>
+              <div style={{fontSize:12,color:SPdim,marginBottom:12,lineHeight:1.6}}>Push saves all your data up to the cloud now. Pull restores it if something was lost.</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={spPush} disabled={syncSt!=="idle"} style={{flex:1,background:syncSt==="pushed"?"#4a9a7a":syncSt==="error"?"#aa4444":"linear-gradient(135deg,"+SPlav+","+SPteal+")",color:"#fff",border:"none",borderRadius:12,padding:"11px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",fontWeight:600,opacity:syncSt!=="idle"?0.7:1}}>{syncSt==="pushing"?"Saving...":syncSt==="pushed"?"Saved ✓":"Push to Cloud"}</button>
+                <button onClick={spPull} disabled={syncSt!=="idle"} style={{flex:1,background:syncSt==="pulled"?"#4a9a7a":syncSt==="error"?"#aa4444":SPbg2,color:syncSt==="pulled"||syncSt==="error"?"#fff":SPdim,border:"1px solid "+SPbdr,borderRadius:12,padding:"11px",fontSize:12,cursor:"pointer",fontFamily:"Georgia,serif",opacity:syncSt!=="idle"?0.7:1}}>{syncSt==="pulling"?"Pulling...":syncSt==="pulled"?"Done! Reloading...":syncSt==="error"?"Could not reach cloud":"Pull from Cloud"}</button>
+              </div>
+            </div>
           </div>
         )}
 
